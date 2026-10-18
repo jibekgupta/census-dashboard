@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore U.S. Census population, income, housing, education, and employment data by state and county.">
+  <meta name="theme-color" content="#f2efe6">
+  <title>Census Atlas — People, places, patterns</title>
+  <link rel="preconnect" href="https://api.census.gov">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to dashboard</a>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Census Atlas home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>Census <strong>Atlas</strong></span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <button class="nav-link active" data-section="overview">Overview</button>
+      <button class="nav-link" data-section="compare">Compare</button>
+      <button class="nav-link" data-section="methodology">Methodology</button>
+    </nav>
+    <div class="top-actions">
+      <span class="source-pill"><span></span> ACS 5-year</span>
+      <button class="icon-button" id="theme-toggle" aria-label="Toggle color theme" title="Toggle theme">◐</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="eyebrow">United States demographic intelligence</div>
+      <div class="hero-grid">
+        <div>
+          <h1>Understand a place.<br><em>See the pattern.</em></h1>
+          <p>Explore the people, economies, and homes shaping every U.S. state and county—grounded in the latest American Community Survey.</p>
+        </div>
+        <div class="hero-note">
+          <span class="note-number">01</span>
+          <p>Reliable public data,<br>made legible.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="filter-shell" aria-label="Dashboard filters">
+      <div class="filter-group">
+        <label for="state-select">State</label>
+        <select id="state-select"></select>
+      </div>
+      <div class="filter-group">
+        <label for="county-select">County</label>
+        <select id="county-select"><option value="">Entire state</option></select>
+      </div>
+      <div class="filter-group compact">
+        <label for="year-select">Year</label>
+        <select id="year-select"></select>
+      </div>
+      <button class="primary-button" id="explore-button">Explore place <span aria-hidden="true">↗</span></button>
+    </section>
+
+    <div class="status-bar" role="status" aria-live="polite">
+      <span id="status-dot" class="status-dot"></span>
+      <span id="status-text">Connecting to the Census Bureau…</span>
+      <button id="retry-button" class="text-button" hidden>Retry</button>
+    </div>
+
+    <section id="overview-section" class="dashboard-section active-section">
+      <div class="section-heading">
+        <div>
+          <span class="kicker">Place profile</span>
+          <h2 id="place-name">Maryland</h2>
+        </div>
+        <div class="section-meta">
+          <span id="profile-year">2024 estimates</span>
+          <button class="outline-button" id="share-button">Copy view</button>
+          <button class="outline-button" id="export-button">Export data</button>
+        </div>
+      </div>
+
+      <div id="kpi-grid" class="kpi-grid" aria-busy="true"></div>
+
+      <div class="editorial-grid">
+        <article class="panel trend-panel">
+          <div class="panel-heading">
+            <div><span class="kicker">Six-year movement</span><h3>Population trend</h3></div>
+            <div class="metric-toggle" role="group" aria-label="Trend metric">
+              <button class="active" data-trend="population">People</button>
+              <button data-trend="income">Income</button>
+            </div>
+          </div>
+          <div id="trend-chart" class="chart" aria-label="Population trend chart"></div>
+        </article>
+
+        <article class="panel insight-panel">
+          <span class="kicker">At a glance</span>
+          <blockquote id="insight-text">Loading a plain-language summary of this place…</blockquote>
+          <div class="insight-rule"></div>
+          <p class="fine-print">Comparisons use ACS 5-year estimates. Differences may fall within margins of error.</p>
+        </article>
+      </div>
+
+      <div class="detail-grid">
+        <article class="panel">
+          <div class="panel-heading"><div><span class="kicker">Population makeup</span><h3>Race &amp; ethnicity</h3></div></div>
+          <div id="race-chart" class="bar-list"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-heading"><div><span class="kicker">Selected outcomes</span><h3>Community profile</h3></div></div>
+          <div id="profile-chart" class="profile-list"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="compare-section" class="dashboard-section" hidden>
+      <div class="section-heading">
+        <div><span class="kicker">Side by side</span><h2>Compare states</h2></div>
+        <p>Choose up to four places and compare the same ACS indicators.</p>
+      </div>
+      <div class="compare-toolbar">
+        <select id="compare-state-select" aria-label="State to add"></select>
+        <button id="add-compare-button" class="primary-button">Add state</button>
+      </div>
+      <div id="comparison-cards" class="comparison-cards"></div>
+      <div class="panel table-panel">
+        <div class="table-scroll"><table id="comparison-table"><caption class="sr-only">State metric comparison</caption></table></div>
+      </div>
+    </section>
+
+    <section id="methodology-section" class="dashboard-section methodology" hidden>
+      <div class="section-heading"><div><span class="kicker">Read the data well</span><h2>Methodology &amp; sources</h2></div></div>
+      <div class="method-grid">
+        <article><span>01</span><h3>Source</h3><p>All live figures come from the U.S. Census Bureau American Community Survey 5-year Detailed Tables API. The selected year is the end year of the five-year estimate period.</p></article>
+        <article><span>02</span><h3>Uncertainty</h3><p>ACS data are survey estimates. We show published 90% margins of error for headline measures when available. Calculated rates should be interpreted with appropriate caution.</p></article>
+        <article><span>03</span><h3>Availability</h3><p>ACS 5-year coverage supports every state and county. During an API interruption, the dashboard clearly labels and displays a small demo dataset instead of failing silently.</p></article>
+        <article><span>04</span><h3>Privacy</h3><p>No account, analytics, cookies, or personal information. Your filters are reflected in the URL so a view can be shared, and theme preference stays only in your browser.</p></article>
+      </div>
+      <a class="source-link" href="https://www.census.gov/programs-surveys/acs/guidance/estimates.html" target="_blank" rel="noreferrer">Read the Census Bureau’s ACS guidance <span>↗</span></a>
+    </section>
+  </main>
+
+  <footer>
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>Census <strong>Atlas</strong></span></div>
+    <p>Built with public data. Not affiliated with the U.S. Census Bureau.</p>
+    <p>Data updates on request.</p>
+  </footer>
+
+  <dialog id="export-dialog">
+    <form method="dialog">
+      <div class="dialog-heading"><div><span class="kicker">Take it with you</span><h2>Export this profile</h2></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div>
+      <p>Download the visible estimates and metadata. Exports include Census variable identifiers for reproducibility.</p>
+      <div class="export-actions">
+        <button type="button" class="primary-button" data-export="csv">Download CSV</button>
+        <button type="button" class="outline-button" data-export="json">Download JSON</button>
+      </div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

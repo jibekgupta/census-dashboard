@@ -1,0 +1,66 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  buildCensusUrl,
+  computeMetrics,
+  formatMetric,
+  parseCensusResponse,
+  toCsv,
+} from "../dist/lib.mjs";
+
+test("buildCensusUrl creates a state query with all variables", () => {
+  const url = new URL(buildCensusUrl({ year: 2024, geography: "state", state: "24", variables: ["NAME", "B01003_001E"] }));
+  assert.equal(url.pathname, "/data/2024/acs/acs5");
+  assert.equal(url.searchParams.get("get"), "NAME,B01003_001E");
+  assert.equal(url.searchParams.get("for"), "state:24");
+});
+
+test("buildCensusUrl creates a county query scoped to a state", () => {
+  const url = new URL(buildCensusUrl({ year: 2023, geography: "county", state: "06", county: "075", variables: ["NAME"] }));
+  assert.equal(url.searchParams.get("for"), "county:075");
+  assert.equal(url.searchParams.get("in"), "state:06");
+});
+
+test("parseCensusResponse converts numeric fields while preserving identifiers", () => {
+  const result = parseCensusResponse([
+    ["NAME", "B01003_001E", "state", "county"],
+    ["Example County", "12345", "01", "003"],
+  ]);
+  assert.deepEqual(result, [{ NAME: "Example County", B01003_001E: 12345, state: "01", county: "003" }]);
+});
+
+test("computeMetrics calculates rates and handles unavailable values", () => {
+  const values = computeMetrics({
+    B01003_001E: 1000,
+    B19013_001E: 85000,
+    B17001_002E: 120,
+    B17001_001E: 960,
+    B23025_002E: 700,
+    B23025_005E: 35,
+    B23025_003E: 665,
+    B25003_001E: 400,
+    B25003_002E: 260,
+    B15003_001E: 700,
+    B15003_022E: 100,
+    B15003_023E: 70,
+    B15003_024E: 30,
+    B15003_025E: 20,
+  });
+  assert.equal(values.population.value, 1000);
+  assert.equal(values.poverty.value, 12.5);
+  assert.equal(values.unemployment.value, 5);
+  assert.equal(values.homeownership.value, 65);
+  assert.equal(values.bachelors.value, 31.4);
+});
+
+test("formatMetric formats compact values, currency, and percentages", () => {
+  assert.equal(formatMetric(1250000, "number"), "1.25M");
+  assert.equal(formatMetric(85400, "currency"), "$85.4K");
+  assert.equal(formatMetric(12.34, "percent"), "12.3%");
+  assert.equal(formatMetric(null, "number"), "Not available");
+});
+
+test("toCsv quotes commas and escapes quotes", () => {
+  const csv = toCsv([{ place: "Austin, Texas", note: "A \"test\"", value: 3 }]);
+  assert.equal(csv, 'place,note,value\r\n"Austin, Texas","A ""test""",3');
+});
