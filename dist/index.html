@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="./styles.css">
   <script type="module" src="./app.js"></script>
 </head>
-<body>
+<body data-section="overview">
   <a class="skip-link" href="#main">Skip to dashboard</a>
   <header class="topbar">
     <a class="brand" href="./" aria-label="Census Atlas home">
@@ -134,6 +134,7 @@
         <p>Choose up to four states or counties and compare the same ACS indicators.</p>
       </div>
       <div class="compare-toolbar">
+        <label class="compare-control" for="compare-year-select"><span>Year</span><select id="compare-year-select" aria-label="Comparison year"></select></label>
         <select id="compare-level-select" aria-label="Comparison geography level"><option value="state">State</option><option value="county">County</option></select>
         <select id="compare-state-select" aria-label="Comparison state"></select>
         <select id="compare-county-select" aria-label="Comparison county" hidden><option value="">Choose county</option></select>

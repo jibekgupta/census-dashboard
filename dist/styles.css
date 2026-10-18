@@ -120,6 +120,10 @@ h1 em { font-family: "Newsreader", Georgia, serif; color: var(--orange); font-we
 .status-bar .text-button { text-decoration: underline; }
 .status-bar #api-key-button { margin-left: auto; }
 
+body[data-section="compare"] .hero,
+body[data-section="compare"] .filter-shell { display: none; }
+body[data-section="compare"] .status-bar { margin-top: 18px; }
+
 .dashboard-section { padding: 64px 0 100px; }
 .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; margin-bottom: 34px; }
 .section-heading h2 { margin: .3rem 0 0; font-size: clamp(36px, 4vw, 58px); letter-spacing: -.05em; line-height: 1; font-weight: 500; }
@@ -190,8 +194,13 @@ blockquote { margin: 2rem 0; font-family: "Newsreader", Georgia, serif; font-sty
 .map-gradient { width: 120px; height: 8px; background: linear-gradient(90deg, color-mix(in srgb, var(--forest-2) 14%, var(--paper)), var(--forest-2)); }
 .map-footer #map-status { margin-left: auto; }
 
-.compare-toolbar { display: flex; flex-wrap: wrap; gap: .8rem; max-width: 900px; margin-bottom: 2rem; }
+.compare-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: .8rem; max-width: 900px; margin-bottom: 2rem; }
 .compare-toolbar select { border: 1px solid var(--line); padding: .7rem 2.4rem .7rem .8rem; }
+.compare-toolbar > select { width: auto; min-width: 190px; }
+.compare-toolbar #compare-state-select,
+.compare-toolbar #compare-county-select { min-width: 240px; }
+.compare-control { display: grid; gap: .35rem; }
+.compare-control > span { color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
 .comparison-cards { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1rem; }
 .comparison-chip { border: 1px solid var(--line); padding: .55rem .7rem .55rem .9rem; display: inline-flex; gap: .8rem; align-items: center; background: var(--panel); }
 .comparison-chip button { border: 0; background: none; cursor: pointer; color: var(--muted); }

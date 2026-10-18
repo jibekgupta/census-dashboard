@@ -21,6 +21,7 @@ const elements = {
   showKey: $("#show-key-button"), forgetKey: $("#forget-key-button"),
   map: $("#state-map"), mapMetric: $("#map-metric-select"), mapStatus: $("#map-status"),
   compareLevel: $("#compare-level-select"), compareCounty: $("#compare-county-select"),
+  compareYear: $("#compare-year-select"),
   variableInput: $("#variable-code-input"), runCustom: $("#run-custom-query"),
   queryMessage: $("#query-message"), customTable: $("#custom-results-table"),
   customPlace: $("#custom-result-place"), exportCustom: $("#export-custom-query"),
@@ -79,9 +80,12 @@ function initOptions() {
   elements.compareSelect.innerHTML = stateOptions;
   elements.state.value = state.fips;
   elements.compareSelect.value = "36";
-  elements.year.innerHTML = Array.from({ length: 10 }, (_, index) => 2024 - index)
+  const yearOptions = Array.from({ length: 10 }, (_, index) => 2024 - index)
     .map((year) => `<option value="${year}">${year}</option>`).join("");
+  elements.year.innerHTML = yearOptions;
+  elements.compareYear.innerHTML = yearOptions;
   elements.year.value = String(state.year);
+  elements.compareYear.value = String(state.year);
 }
 
 function renderSkeleton() {
@@ -162,6 +166,7 @@ async function loadProfile() {
   state.fips = elements.state.value;
   state.county = elements.county.value;
   state.year = Number(elements.year.value);
+  elements.compareYear.value = String(state.year);
   syncUrl();
   try {
     if (!state.apiKey) throw new Error("A Census API key is required for live data.");
@@ -378,6 +383,7 @@ function syncUrl() {
 }
 
 function switchSection(section) {
+  document.body.dataset.section = section;
   $$(".nav-link").forEach((button) => button.classList.toggle("active", button.dataset.section === section));
   $$(".dashboard-section").forEach((panel) => {
     const visible = panel.id === `${section}-section`;
@@ -577,6 +583,12 @@ function bindEvents() {
   });
   elements.compareLevel.addEventListener("change", loadCompareCounties);
   elements.compareSelect.addEventListener("change", loadCompareCounties);
+  elements.compareYear.addEventListener("change", () => {
+    state.year = Number(elements.compareYear.value);
+    elements.year.value = String(state.year);
+    syncUrl();
+    loadComparisons();
+  });
   $("#add-compare-button").addEventListener("click", () => {
     const countyMode = elements.compareLevel.value === "county";
     const place = { state: elements.compareSelect.value, county: countyMode ? elements.compareCounty.value : "" };
