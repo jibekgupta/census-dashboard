@@ -1,7 +1,7 @@
 import {
   STATES, VARIABLES, METRIC_META, DEMO_RECORD, DEMO_TRENDS,
   buildCensusUrl, parseCensusResponse, computeMetrics, formatMetric,
-  metricDelta, toCsv,
+  metricDelta, normalizeVariableCodes, toCsv,
 } from "./lib.mjs";
 
 const $ = (selector) => document.querySelector(selector);
@@ -19,6 +19,27 @@ const elements = {
   apiKeyButton: $("#api-key-button"), apiKeyDialog: $("#api-key-dialog"),
   apiKeyForm: $("#api-key-form"), apiKeyInput: $("#api-key-input"),
   showKey: $("#show-key-button"), forgetKey: $("#forget-key-button"),
+  map: $("#state-map"), mapMetric: $("#map-metric-select"), mapStatus: $("#map-status"),
+  compareLevel: $("#compare-level-select"), compareCounty: $("#compare-county-select"),
+  variableInput: $("#variable-code-input"), runCustom: $("#run-custom-query"),
+  queryMessage: $("#query-message"), customTable: $("#custom-results-table"),
+  customPlace: $("#custom-result-place"), exportCustom: $("#export-custom-query"),
+};
+
+const STATE_TILES = {
+  WA:[2,1], OR:[2,2], CA:[2,3], ID:[3,2], NV:[3,3], MT:[4,1], WY:[4,2], UT:[4,3], AZ:[4,4],
+  ND:[5,1], SD:[5,2], CO:[5,3], NM:[5,4], MN:[6,1], NE:[6,2], KS:[6,3], OK:[6,4], TX:[6,5],
+  WI:[7,1], IA:[7,2], MO:[7,3], AR:[7,4], LA:[7,5], MI:[8,1], IL:[8,2], MS:[8,5], IN:[9,2],
+  KY:[9,3], TN:[9,4], AL:[9,5], OH:[10,2], WV:[10,3], GA:[10,5], DC:[10,6], FL:[11,7],
+  NY:[10,1], PA:[10,2], VA:[11,3], NC:[11,4], SC:[11,5], VT:[11,1], NJ:[11,2], MD:[11,6],
+  NH:[12,1], CT:[12,3], DE:[12,5], ME:[13,1], MA:[13,2], RI:[13,4],
+  AK:[1,7], HI:[3,7], PR:[5,7],
+};
+
+const VARIABLE_LABELS = {
+  B01003_001E: "Total population", B19013_001E: "Median household income",
+  B25077_001E: "Median home value", B01002_001E: "Median age",
+  B17001_002E: "Population below poverty level", B25003_002E: "Owner-occupied housing units",
 };
 
 function readSessionKey() {
@@ -41,8 +62,10 @@ const state = {
   record: null,
   trends: [],
   trendMetric: "population",
-  compareFips: ["24", "51", "06"],
+  comparePlaces: [{ state: "24", county: "" }, { state: "51", county: "" }, { state: "06", county: "" }],
   compareRecords: new Map(),
+  mapRecords: [],
+  customRows: [],
   mode: "loading",
   apiKey: readSessionKey(),
 };
@@ -92,8 +115,7 @@ async function loadCounties() {
   elements.county.disabled = true;
   elements.county.innerHTML = '<option value="">Loading counties…</option>';
   try {
-    const url = buildCensusUrl({ year: state.year, geography: "county", state: state.fips, county: "*", variables: ["NAME"], apiKey: state.apiKey });
-    const counties = parseCensusResponse(await fetchJson(url));
+    const counties = await getCounties(state.fips);
     elements.county.innerHTML = '<option value="">Entire state</option>' + counties
       .sort((a, b) => a.NAME.localeCompare(b.NAME))
       .map((county) => `<option value="${county.county}">${county.NAME.split(",")[0]}</option>`).join("");
@@ -105,6 +127,12 @@ async function loadCounties() {
   } finally {
     elements.county.disabled = false;
   }
+}
+
+async function getCounties(stateFips) {
+  if (!state.apiKey) throw new Error("A Census API key is required to load counties.");
+  const url = buildCensusUrl({ year: state.year, geography: "county", state: stateFips, county: "*", variables: ["NAME"], apiKey: state.apiKey });
+  return parseCensusResponse(await fetchJson(url)).sort((a, b) => a.NAME.localeCompare(b.NAME));
 }
 
 async function fetchRecord({ fips, county = "", year = state.year }) {
@@ -151,6 +179,7 @@ async function loadProfile() {
     console.warn(error);
   }
   renderProfile();
+  await loadMapData();
 }
 
 function renderProfile() {
@@ -234,6 +263,51 @@ function renderInsight(metrics) {
   elements.insight.textContent = `In ${place}, ${sentence}. These estimates describe a community in motion—not a final verdict on it.`;
 }
 
+async function loadMapData() {
+  if (state.apiKey) {
+    try {
+      const url = buildCensusUrl({ year: state.year, geography: "state", state: "*", variables: VARIABLES, apiKey: state.apiKey });
+      state.mapRecords = parseCensusResponse(await fetchJson(url));
+      elements.mapStatus.textContent = `Live ${state.year} ACS data`;
+      renderMap();
+      return;
+    } catch (error) {
+      console.warn(error);
+    }
+  }
+  state.mapRecords = STATES.map((item, index) => {
+    const factor = .35 + ((Number(item.fips) * 17) % 90) / 50;
+    return {
+      ...DEMO_RECORD, NAME: item.name, state: item.fips,
+      B01003_001E: Math.round(DEMO_RECORD.B01003_001E * factor),
+      B19013_001E: Math.round(DEMO_RECORD.B19013_001E * (.68 + ((index * 11) % 55) / 100)),
+      B17001_002E: Math.round(DEMO_RECORD.B17001_001E * (.06 + ((index * 7) % 14) / 100)),
+      B25003_002E: Math.round(DEMO_RECORD.B25003_001E * (.48 + ((index * 5) % 28) / 100)),
+    };
+  });
+  elements.mapStatus.textContent = "Illustrative demo pattern · Add API key for live values";
+  renderMap();
+}
+
+function renderMap() {
+  const metricKey = elements.mapMetric.value;
+  const meta = METRIC_META[metricKey];
+  const rows = state.mapRecords.map((record) => ({
+    record, value: computeMetrics(record)[metricKey]?.value,
+    stateInfo: STATES.find((item) => item.fips === record.state),
+  })).filter((item) => item.stateInfo && STATE_TILES[item.stateInfo.abbreviation]);
+  const values = rows.map((item) => item.value).filter(Number.isFinite);
+  const min = Math.min(...values), max = Math.max(...values);
+  elements.map.innerHTML = rows.map(({ record, value, stateInfo }) => {
+    const [column, row] = STATE_TILES[stateInfo.abbreviation];
+    const shade = Number.isFinite(value) ? Math.round(((value - min) / (max - min || 1)) * 100) : 0;
+    const label = `${stateInfo.name}: ${formatMetric(value, meta.unit)}`;
+    return `<button class="state-tile ${Number.isFinite(value) ? "" : "no-data"} ${record.state === state.fips ? "selected" : ""}" style="grid-column:${column};grid-row:${row};--shade:${14 + shade * .72}%" data-map-state="${record.state}" aria-label="${label}" title="${label}">${stateInfo.abbreviation}</button>`;
+  }).join("");
+  $("#map-low").textContent = Number.isFinite(min) ? formatMetric(min, meta.unit) : "Lower";
+  $("#map-high").textContent = Number.isFinite(max) ? formatMetric(max, meta.unit) : "Higher";
+}
+
 function syncUrl() {
   const next = new URL(location.href);
   next.searchParams.set("state", state.fips);
@@ -254,28 +328,62 @@ function switchSection(section) {
 }
 
 async function loadComparisons() {
-  elements.compareCards.innerHTML = state.compareFips.map((fips) => {
-    const item = STATES.find((candidate) => candidate.fips === fips);
-    return `<span class="comparison-chip">${item.name}<button data-remove="${fips}" aria-label="Remove ${item.name}">×</button></span>`;
+  elements.compareCards.innerHTML = state.comparePlaces.map((place) => {
+    const key = comparisonKey(place);
+    const cached = state.compareRecords.get(`${key}-${state.year}`);
+    const stateInfo = STATES.find((candidate) => candidate.fips === place.state);
+    const name = cached?.NAME?.split(",")[0] || stateInfo?.name || key;
+    return `<span class="comparison-chip">${name}<button data-remove="${key}" aria-label="Remove ${name}">×</button></span>`;
   }).join("");
   elements.compareTable.innerHTML = '<tbody><tr><td>Loading comparison…</td></tr></tbody>';
-  await Promise.all(state.compareFips.map(async (fips) => {
-    if (state.compareRecords.has(`${fips}-${state.year}`)) return;
+  await Promise.all(state.comparePlaces.map(async (place) => {
+    const key = `${comparisonKey(place)}-${state.year}`;
+    if (state.compareRecords.has(key)) return;
     try {
-      state.compareRecords.set(`${fips}-${state.year}`, await fetchRecord({ fips }));
+      if (!state.apiKey) throw new Error("Live comparison requires an API key.");
+      state.compareRecords.set(key, await fetchRecord({ fips: place.state, county: place.county }));
     } catch {
-      const place = STATES.find((item) => item.fips === fips);
-      const factor = .78 + Number(fips) / 120;
-      state.compareRecords.set(`${fips}-${state.year}`, { ...DEMO_RECORD, NAME: place.name, B01003_001E: Math.round(DEMO_RECORD.B01003_001E * factor), B19013_001E: Math.round(DEMO_RECORD.B19013_001E * (.85 + Number(fips) / 300)) });
+      const stateInfo = STATES.find((item) => item.fips === place.state);
+      const factor = .78 + Number(place.state) / 120;
+      const fallbackName = place.county ? `County ${place.county}, ${stateInfo.name} (demo)` : `${stateInfo.name} (demo)`;
+      state.compareRecords.set(key, { ...DEMO_RECORD, NAME: fallbackName, state: place.state, county: place.county, B01003_001E: Math.round(DEMO_RECORD.B01003_001E * factor), B19013_001E: Math.round(DEMO_RECORD.B19013_001E * (.85 + Number(place.state) / 300)) });
     }
   }));
+  elements.compareCards.innerHTML = state.comparePlaces.map((place) => {
+    const key = comparisonKey(place);
+    const name = state.compareRecords.get(`${key}-${state.year}`)?.NAME?.split(",")[0] || key;
+    return `<span class="comparison-chip">${name}<button data-remove="${key}" aria-label="Remove ${name}">×</button></span>`;
+  }).join("");
   renderComparisonTable();
 }
 
+function comparisonKey(place) {
+  return `${place.state}:${place.county || "state"}`;
+}
+
 function renderComparisonTable() {
-  const records = state.compareFips.map((fips) => state.compareRecords.get(`${fips}-${state.year}`)).filter(Boolean);
+  const records = state.comparePlaces.map((place) => state.compareRecords.get(`${comparisonKey(place)}-${state.year}`)).filter(Boolean);
   const keys = ["population", "income", "age", "poverty", "homeValue", "bachelors"];
   elements.compareTable.innerHTML = `<thead><tr><th>Indicator</th>${records.map((record) => `<th>${record.NAME.split(",")[0]}</th>`).join("")}</tr></thead><tbody>${keys.map((key) => `<tr><td>${METRIC_META[key].label}</td>${records.map((record) => `<td>${formatMetric(computeMetrics(record)[key].value, METRIC_META[key].unit)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+}
+
+async function loadCompareCounties() {
+  const countyMode = elements.compareLevel.value === "county";
+  elements.compareCounty.hidden = !countyMode;
+  if (!countyMode) return;
+  elements.compareCounty.innerHTML = '<option value="">Loading counties…</option>';
+  if (!state.apiKey) {
+    elements.compareCounty.innerHTML = '<option value="">Add API key to load counties</option>';
+    elements.compareCounty.disabled = true;
+    return;
+  }
+  try {
+    const counties = await getCounties(elements.compareSelect.value);
+    elements.compareCounty.innerHTML = '<option value="">Choose county</option>' + counties.map((county) => `<option value="${county.county}">${county.NAME.split(",")[0]}</option>`).join("");
+    elements.compareCounty.disabled = false;
+  } catch {
+    elements.compareCounty.innerHTML = '<option value="">Counties unavailable</option>';
+  }
 }
 
 function download(type) {
@@ -294,6 +402,65 @@ function download(type) {
   URL.revokeObjectURL(anchor.href);
   elements.dialog.close();
   toast(`${type.toUpperCase()} export downloaded`);
+}
+
+async function runCustomQuery() {
+  elements.queryMessage.className = "query-message";
+  const { valid, invalid, truncated } = normalizeVariableCodes(elements.variableInput.value);
+  if (!valid.length) {
+    elements.queryMessage.textContent = "Enter at least one complete variable code, such as B01003_001E.";
+    elements.queryMessage.classList.add("error");
+    return;
+  }
+  if (invalid.length) {
+    elements.queryMessage.textContent = `These codes are not complete Census variables: ${invalid.join(", ")}`;
+    elements.queryMessage.classList.add("error");
+    return;
+  }
+  if (!state.apiKey) {
+    elements.queryMessage.textContent = "Add your Census API key to run a custom query.";
+    elements.queryMessage.classList.add("error");
+    elements.apiKeyButton.click();
+    return;
+  }
+  elements.runCustom.disabled = true;
+  elements.runCustom.textContent = "Running query…";
+  elements.queryMessage.textContent = truncated ? "Using the first 20 unique variables." : "Requesting data from the Census Bureau…";
+  try {
+    const selectedState = elements.state.value;
+    const selectedCounty = elements.county.value;
+    const year = Number(elements.year.value);
+    const url = buildCensusUrl({ year, geography: selectedCounty ? "county" : "state", state: selectedState, county: selectedCounty, variables: ["NAME", ...valid], apiKey: state.apiKey });
+    const [record] = parseCensusResponse(await fetchJson(url));
+    if (!record) throw new Error("No observation returned.");
+    state.customRows = valid.map((code) => ({
+      geography: record.NAME, year, variable: code,
+      label: VARIABLE_LABELS[code] || "Custom ACS variable",
+      value: record[code],
+    }));
+    elements.customPlace.textContent = record.NAME;
+    elements.customTable.innerHTML = `<thead><tr><th>Variable</th><th>Description</th><th>Value</th></tr></thead><tbody>${state.customRows.map((row) => `<tr><td><code>${row.variable}</code></td><td>${row.label}</td><td>${formatMetric(row.value, "number", { full: true })}</td></tr>`).join("")}</tbody>`;
+    elements.exportCustom.hidden = false;
+    elements.queryMessage.textContent = `${valid.length} variable${valid.length === 1 ? "" : "s"} loaded for ${record.NAME}.`;
+  } catch (error) {
+    elements.queryMessage.textContent = "The Census query failed. Check the variable codes, year, geography, and API key.";
+    elements.queryMessage.classList.add("error");
+    console.warn(error);
+  } finally {
+    elements.runCustom.disabled = false;
+    elements.runCustom.innerHTML = 'Run Census query <span aria-hidden="true">↗</span>';
+  }
+}
+
+function exportCustomQuery() {
+  if (!state.customRows.length) return;
+  const blob = new Blob([toCsv(state.customRows)], { type: "text/csv;charset=utf-8" });
+  const anchor = document.createElement("a");
+  anchor.href = URL.createObjectURL(blob);
+  anchor.download = `census-atlas-custom-query-${state.year}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(anchor.href);
+  toast("Custom query CSV downloaded");
 }
 
 let toastTimer;
@@ -329,18 +496,36 @@ function bindEvents() {
   });
   elements.export.addEventListener("click", () => elements.dialog.showModal());
   $$("[data-export]").forEach((button) => button.addEventListener("click", () => download(button.dataset.export)));
+  elements.mapMetric.addEventListener("change", renderMap);
+  elements.map.addEventListener("click", async (event) => {
+    const fips = event.target.dataset.mapState;
+    if (!fips) return;
+    elements.state.value = fips;
+    state.fips = fips;
+    state.county = "";
+    if (state.apiKey) await loadCounties();
+    else elements.county.innerHTML = '<option value="">Entire state</option>';
+    await loadProfile();
+    scrollTo({ top: Math.max(0, $(".status-bar").offsetTop - 90), behavior: "smooth" });
+  });
+  elements.compareLevel.addEventListener("change", loadCompareCounties);
+  elements.compareSelect.addEventListener("change", loadCompareCounties);
   $("#add-compare-button").addEventListener("click", () => {
-    const fips = elements.compareSelect.value;
-    if (state.compareFips.includes(fips)) return toast("That state is already in the comparison");
-    if (state.compareFips.length >= 4) return toast("Compare up to four states at a time");
-    state.compareFips.push(fips); loadComparisons();
+    const countyMode = elements.compareLevel.value === "county";
+    const place = { state: elements.compareSelect.value, county: countyMode ? elements.compareCounty.value : "" };
+    if (countyMode && !place.county) return toast("Choose a county first");
+    if (state.comparePlaces.some((item) => comparisonKey(item) === comparisonKey(place))) return toast("That place is already in the comparison");
+    if (state.comparePlaces.length >= 4) return toast("Compare up to four places at a time");
+    state.comparePlaces.push(place); loadComparisons();
   });
   elements.compareCards.addEventListener("click", (event) => {
-    const fips = event.target.dataset.remove;
-    if (!fips) return;
-    state.compareFips = state.compareFips.filter((item) => item !== fips);
+    const key = event.target.dataset.remove;
+    if (!key) return;
+    state.comparePlaces = state.comparePlaces.filter((item) => comparisonKey(item) !== key);
     loadComparisons();
   });
+  elements.runCustom.addEventListener("click", runCustomQuery);
+  elements.exportCustom.addEventListener("click", exportCustomQuery);
   elements.apiKeyButton.addEventListener("click", () => {
     elements.apiKeyInput.value = state.apiKey;
     elements.apiKeyInput.type = "password";
@@ -363,15 +548,18 @@ function bindEvents() {
     if (!apiKey) return;
     state.apiKey = apiKey;
     writeSessionKey(apiKey);
+    state.compareRecords.clear();
     elements.apiKeyButton.textContent = "Manage API key";
     elements.apiKeyDialog.close();
     toast("API key saved for this tab");
     await loadCounties();
+    await loadCompareCounties();
     await loadProfile();
   });
   elements.forgetKey.addEventListener("click", async () => {
     state.apiKey = "";
     writeSessionKey("");
+    state.compareRecords.clear();
     elements.apiKeyInput.value = "";
     elements.apiKeyButton.textContent = "Add API key";
     elements.apiKeyDialog.close();

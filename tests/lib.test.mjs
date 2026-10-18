@@ -4,6 +4,7 @@ import {
   buildCensusUrl,
   computeMetrics,
   formatMetric,
+  normalizeVariableCodes,
   parseCensusResponse,
   toCsv,
 } from "../dist/lib.mjs";
@@ -70,4 +71,11 @@ test("formatMetric formats compact values, currency, and percentages", () => {
 test("toCsv quotes commas and escapes quotes", () => {
   const csv = toCsv([{ place: "Austin, Texas", note: "A \"test\"", value: 3 }]);
   assert.equal(csv, 'place,note,value\r\n"Austin, Texas","A ""test""",3');
+});
+
+test("normalizeVariableCodes accepts comma or whitespace separated Census variables", () => {
+  assert.deepEqual(normalizeVariableCodes("b01003_001e, B19013_001E\nB01003_001E"), {
+    valid: ["B01003_001E", "B19013_001E"], invalid: [], truncated: false,
+  });
+  assert.deepEqual(normalizeVariableCodes("B01003 bad-code").invalid, ["B01003", "BAD-CODE"]);
 });

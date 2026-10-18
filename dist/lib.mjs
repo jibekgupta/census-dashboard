@@ -112,6 +112,18 @@ export function metricDelta(current, previous) {
   return ((current - previous) / Math.abs(previous)) * 100;
 }
 
+export function normalizeVariableCodes(input, limit = 20) {
+  const tokens = String(input || "").toUpperCase().split(/[\s,;]+/).filter(Boolean);
+  const valid = [];
+  const invalid = [];
+  for (const token of tokens) {
+    if (/^[A-Z][A-Z0-9]*_\d{3}[A-Z]$/.test(token)) {
+      if (!valid.includes(token) && valid.length < limit) valid.push(token);
+    } else if (!invalid.includes(token)) invalid.push(token);
+  }
+  return { valid, invalid, truncated: tokens.filter((token) => /^[A-Z][A-Z0-9]*_\d{3}[A-Z]$/.test(token)).length > limit };
+}
+
 export function toCsv(rows) {
   if (!rows.length) return "";
   const headers = Object.keys(rows[0]);

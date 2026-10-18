@@ -20,6 +20,7 @@
     <nav aria-label="Primary navigation">
       <button class="nav-link active" data-section="overview">Overview</button>
       <button class="nav-link" data-section="compare">Compare</button>
+      <button class="nav-link" data-section="explorer">Data Explorer</button>
       <button class="nav-link" data-section="methodology">Methodology</button>
     </nav>
     <div class="top-actions">
@@ -111,20 +112,56 @@
           <div id="profile-chart" class="profile-list"></div>
         </article>
       </div>
+
+      <article class="panel map-panel">
+        <div class="panel-heading map-heading">
+          <div><span class="kicker">Geographic pattern</span><h3>State tile map</h3><p>Color shows the selected metric across states. Select a tile to open its profile.</p></div>
+          <select id="map-metric-select" aria-label="Map metric">
+            <option value="population">Population</option>
+            <option value="income">Median household income</option>
+            <option value="poverty">Poverty rate</option>
+            <option value="homeownership">Homeownership</option>
+          </select>
+        </div>
+        <div id="state-map" class="state-map" aria-label="United States state tile map"></div>
+        <div class="map-footer"><span id="map-low">Lower</span><span class="map-gradient" aria-hidden="true"></span><span id="map-high">Higher</span><span id="map-status">Add an API key for live state values</span></div>
+      </article>
     </section>
 
     <section id="compare-section" class="dashboard-section" hidden>
       <div class="section-heading">
-        <div><span class="kicker">Side by side</span><h2>Compare states</h2></div>
-        <p>Choose up to four places and compare the same ACS indicators.</p>
+        <div><span class="kicker">Side by side</span><h2>Compare places</h2></div>
+        <p>Choose up to four states or counties and compare the same ACS indicators.</p>
       </div>
       <div class="compare-toolbar">
-        <select id="compare-state-select" aria-label="State to add"></select>
-        <button id="add-compare-button" class="primary-button">Add state</button>
+        <select id="compare-level-select" aria-label="Comparison geography level"><option value="state">State</option><option value="county">County</option></select>
+        <select id="compare-state-select" aria-label="Comparison state"></select>
+        <select id="compare-county-select" aria-label="Comparison county" hidden><option value="">Choose county</option></select>
+        <button id="add-compare-button" class="primary-button">Add place</button>
       </div>
       <div id="comparison-cards" class="comparison-cards"></div>
       <div class="panel table-panel">
         <div class="table-scroll"><table id="comparison-table"><caption class="sr-only">State metric comparison</caption></table></div>
+      </div>
+    </section>
+
+    <section id="explorer-section" class="dashboard-section" hidden>
+      <div class="section-heading">
+        <div><span class="kicker">Build your own query</span><h2>Data Explorer</h2></div>
+        <p>Enter up to 20 ACS detailed-table variable codes and retrieve them for the place selected above.</p>
+      </div>
+      <div class="explorer-grid">
+        <article class="panel query-panel">
+          <label class="input-label" for="variable-code-input">Census variable codes</label>
+          <textarea id="variable-code-input" rows="7" spellcheck="false" placeholder="B01003_001E, B19013_001E, B25077_001E">B01003_001E, B19013_001E, B25077_001E</textarea>
+          <p class="key-help">Separate codes with commas, spaces, or new lines. Use complete variables such as <code>B01003_001E</code>, not only the table group <code>B01003</code>.</p>
+          <button id="run-custom-query" class="primary-button">Run Census query <span aria-hidden="true">↗</span></button>
+          <div id="query-message" class="query-message" role="status" aria-live="polite"></div>
+        </article>
+        <article class="panel explorer-results-panel">
+          <div class="panel-heading"><div><span class="kicker">Query results</span><h3 id="custom-result-place">No query run yet</h3></div><button id="export-custom-query" class="outline-button" hidden>Download CSV</button></div>
+          <div class="table-scroll"><table id="custom-results-table"><tbody><tr><td>Enter Census variables and run the query to see results.</td></tr></tbody></table></div>
+        </article>
       </div>
     </section>
 
@@ -134,7 +171,7 @@
         <article><span>01</span><h3>Source</h3><p>All live figures come from the U.S. Census Bureau American Community Survey 5-year Detailed Tables API. The selected year is the end year of the five-year estimate period.</p></article>
         <article><span>02</span><h3>Uncertainty</h3><p>ACS data are survey estimates. We show published 90% margins of error for headline measures when available. Calculated rates should be interpreted with appropriate caution.</p></article>
         <article><span>03</span><h3>Availability</h3><p>ACS 5-year coverage supports every state and county. During an API interruption, the dashboard clearly labels and displays a small demo dataset instead of failing silently.</p></article>
-        <article><span>04</span><h3>Privacy</h3><p>No account, analytics, cookies, or personal information. Your filters are reflected in the URL so a view can be shared, and theme preference stays only in your browser.</p></article>
+        <article><span>04</span><h3>Privacy</h3><p>No account, analytics, cookies, or personal information. Filters are reflected in the URL for sharing. A user-supplied Census key stays only in the current tab and is sent directly to api.census.gov.</p></article>
       </div>
       <a class="source-link" href="https://www.census.gov/programs-surveys/acs/guidance/estimates.html" target="_blank" rel="noreferrer">Read the Census Bureau’s ACS guidance <span>↗</span></a>
     </section>

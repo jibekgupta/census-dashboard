@@ -9,10 +9,12 @@ unavailable or requires a key.
 ## Features
 
 - State and county profiles with URL-shareable filters
+- Interactive state tile map with selectable population, income, poverty, and homeownership layers
 - Eight headline indicators with margins of error
 - Six-year trends for population and median household income
 - Demographic, housing, education, employment, and poverty breakdowns
-- Side-by-side state comparison
+- Side-by-side state and county comparison
+- Custom Data Explorer for up to 20 ACS detailed-table variable codes
 - CSV and JSON export
 - Dark/light theme, keyboard navigation, reduced-motion support, and responsive layout
 - No account or backend required for the bundled demo experience
