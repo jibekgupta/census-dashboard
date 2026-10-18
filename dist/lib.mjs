@@ -29,6 +29,9 @@ export const VARIABLES = [
   "B15003_024E", "B15003_025E", "B01001_002E", "B01001_026E",
   "B03002_001E", "B03002_003E", "B03002_004E", "B03002_005E", "B03002_006E",
   "B03002_007E", "B03002_008E", "B03002_009E", "B03002_012E",
+  "B05002_001E", "B05002_013E", "B16001_001E", "B16001_002E",
+  "B11001_001E", "B11001_002E", "B25010_001E", "B25064_001E",
+  "B08201_001E", "B08201_002E", "B08301_001E", "B08301_010E", "B08301_021E",
 ];
 
 export const METRIC_META = {
@@ -40,12 +43,26 @@ export const METRIC_META = {
   homeValue: { label: "Median home value", unit: "currency", source: "B25077" },
   homeownership: { label: "Homeownership", unit: "percent", source: "B25003" },
   bachelors: { label: "Bachelor’s degree+", unit: "percent", source: "B15003" },
+  white: { label: "White, non-Hispanic", unit: "percent", source: "B03002" },
+  black: { label: "Black population", unit: "percent", source: "B03002" },
+  asian: { label: "Asian population", unit: "percent", source: "B03002" },
+  hispanic: { label: "Hispanic or Latino", unit: "percent", source: "B03002" },
+  foreignBorn: { label: "Foreign-born population", unit: "percent", source: "B05002" },
+  nonEnglish: { label: "Language other than English at home", unit: "percent", source: "B16001" },
+  familyHouseholds: { label: "Family households", unit: "percent", source: "B11001" },
+  householdSize: { label: "Average household size", unit: "decimal", source: "B25010" },
+  rent: { label: "Median gross rent", unit: "currency", source: "B25064" },
+  noVehicle: { label: "Households without a vehicle", unit: "percent", source: "B08201" },
+  transit: { label: "Commute by public transit", unit: "percent", source: "B08301" },
+  workFromHome: { label: "Work from home", unit: "percent", source: "B08301" },
 };
 
 export function buildCensusUrl({ year, geography, state, county, variables = VARIABLES, apiKey = "" }) {
   const url = new URL(`${CENSUS_BASE}/${year}/acs/acs5`);
   url.searchParams.set("get", variables.join(","));
-  if (geography === "county") {
+  if (geography === "us") {
+    url.searchParams.set("for", "us:1");
+  } else if (geography === "county") {
     url.searchParams.set("for", `county:${county || "*"}`);
     url.searchParams.set("in", `state:${state}`);
   } else {
@@ -89,6 +106,18 @@ export function computeMetrics(record) {
       value: safeRate(sum(record, ["B15003_022E", "B15003_023E", "B15003_024E", "B15003_025E"]), record.B15003_001E),
       moe: null,
     },
+    white: { value: safeRate(record.B03002_003E, record.B03002_001E), moe: null },
+    black: { value: safeRate(record.B03002_004E, record.B03002_001E), moe: null },
+    asian: { value: safeRate(record.B03002_006E, record.B03002_001E), moe: null },
+    hispanic: { value: safeRate(record.B03002_012E, record.B03002_001E), moe: null },
+    foreignBorn: { value: safeRate(record.B05002_013E, record.B05002_001E), moe: null },
+    nonEnglish: { value: safeRate((record.B16001_001E || 0) - (record.B16001_002E || 0), record.B16001_001E), moe: null },
+    familyHouseholds: { value: safeRate(record.B11001_002E, record.B11001_001E), moe: null },
+    householdSize: { value: record.B25010_001E, moe: null },
+    rent: { value: record.B25064_001E, moe: null },
+    noVehicle: { value: safeRate(record.B08201_002E, record.B08201_001E), moe: null },
+    transit: { value: safeRate(record.B08301_010E, record.B08301_001E), moe: null },
+    workFromHome: { value: safeRate(record.B08301_021E, record.B08301_001E), moe: null },
   };
 }
 
@@ -96,6 +125,7 @@ export function formatMetric(value, unit = "number", options = {}) {
   if (!Number.isFinite(value)) return "Not available";
   if (unit === "percent") return `${value.toFixed(1)}%`;
   if (unit === "years") return `${value.toFixed(1)} yrs`;
+  if (unit === "decimal") return value.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 2 });
   const currency = unit === "currency";
   if (options.full) {
     return new Intl.NumberFormat("en-US", currency ? { style: "currency", currency: "USD", maximumFractionDigits: 0 } : {}).format(value);
@@ -145,6 +175,10 @@ export const DEMO_RECORD = {
   B01001_026E: 3157224, B03002_001E: 6177224, B03002_003E: 2970000,
   B03002_004E: 1780000, B03002_005E: 24000, B03002_006E: 450000,
   B03002_007E: 4500, B03002_008E: 205000, B03002_009E: 320000, B03002_012E: 730000,
+  B05002_001E: 6177224, B05002_013E: 960000, B16001_001E: 5800000, B16001_002E: 4700000,
+  B11001_001E: 2350000, B11001_002E: 1510000, B25010_001E: 2.62, B25064_001E: 1785,
+  B08201_001E: 2350000, B08201_002E: 210000, B08301_001E: 2940000, B08301_010E: 238000,
+  B08301_021E: 420000,
 };
 
 export const DEMO_TRENDS = [

@@ -9,8 +9,11 @@ unavailable or requires a key.
 ## Features
 
 - State and county profiles with URL-shareable filters
-- Interactive geographic state choropleth with selectable population, income, poverty, and homeownership layers
+- Search across states, loaded counties, measures, and Census table identifiers
+- Topic catalog covering population, race and ethnicity, income, housing, education, employment, families, language, birthplace, and transportation
+- State and county map explorer with 20 measures, year controls, hover values, distributions, and highest/lowest rankings
 - Eight headline indicators with margins of error
+- State or national benchmark context for every place profile
 - Six-year trends for population and median household income
 - Demographic, housing, education, employment, and poverty breakdowns
 - Side-by-side state and county comparison
@@ -44,9 +47,10 @@ are accompanied by their published 90% margins of error where available.
 Values shown as rates are calculated from published numerator and denominator
 estimates and may differ slightly from Census profile-table values due to
 rounding. ACS estimates are not a population census and should not be treated
-as exact counts.
+as exact counts. Adjacent ACS 5-year releases overlap by four survey years, so
+the app presents them as a recent trend rather than independent periods.
 
-The geographic choropleth loads Census-derived `us-atlas` state geometry and
+The geographic choropleth loads Census-derived `us-atlas` state and county geometry and
 the open-source `topojson-client` decoder from jsDelivr. These assets provide
 only public boundaries; Census values still come directly from
 `api.census.gov`. If the geometry assets cannot load, the accessible tile-map

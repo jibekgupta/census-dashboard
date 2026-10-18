@@ -11,7 +11,7 @@ const elements = {
   state: $("#state-select"), county: $("#county-select"), year: $("#year-select"),
   explore: $("#explore-button"), place: $("#place-name"), profileYear: $("#profile-year"),
   statusText: $("#status-text"), statusDot: $("#status-dot"), retry: $("#retry-button"),
-  kpis: $("#kpi-grid"), trend: $("#trend-chart"), race: $("#race-chart"),
+  kpis: $("#kpi-grid"), trend: $("#trend-chart"), race: $("#race-chart"), context: $("#profile-context-grid"),
   profile: $("#profile-chart"), insight: $("#insight-text"), theme: $("#theme-toggle"),
   share: $("#share-button"), export: $("#export-button"), dialog: $("#export-dialog"),
   toast: $("#toast"), compareSelect: $("#compare-state-select"),
@@ -20,6 +20,10 @@ const elements = {
   apiKeyForm: $("#api-key-form"), apiKeyInput: $("#api-key-input"),
   showKey: $("#show-key-button"), forgetKey: $("#forget-key-button"),
   map: $("#state-map"), mapMetric: $("#map-metric-select"), mapStatus: $("#map-status"),
+  mapLevel: $("#map-level-select"), mapState: $("#map-state-select"), mapStateControl: $("#map-state-control"),
+  mapYear: $("#map-year-select"), mapSummary: $("#map-summary"), mapDistribution: $("#map-distribution"),
+  mapRanking: $("#map-ranking"), mapLowest: $("#map-lowest"), mapTitle: $("#map-title-heading"), topics: $("#topics-grid"),
+  search: $("#atlas-search-input"), searchResults: $("#atlas-search-results"),
   compareLevel: $("#compare-level-select"), compareCounty: $("#compare-county-select"),
   compareYear: $("#compare-year-select"),
   variableInput: $("#variable-code-input"), runCustom: $("#run-custom-query"),
@@ -43,6 +47,20 @@ const VARIABLE_LABELS = {
   B17001_002E: "Population below poverty level", B25003_002E: "Owner-occupied housing units",
 };
 
+const FEATURED_METRICS = ["population", "income", "age", "poverty", "unemployment", "homeValue", "homeownership", "bachelors"];
+
+const TOPICS = [
+  { icon: "👥", title: "Population & age", description: "Population totals and the median age of residents.", metrics: ["population", "age"] },
+  { icon: "◒", title: "Race & ethnicity", description: "Selected race and ethnicity measures reported by the ACS.", metrics: ["white", "black", "asian", "hispanic"] },
+  { icon: "$", title: "Income & poverty", description: "Household income and the share of residents below the poverty line.", metrics: ["income", "poverty"] },
+  { icon: "⌂", title: "Housing", description: "Home values, rents, ownership, and household size.", metrics: ["homeValue", "rent", "homeownership", "householdSize"] },
+  { icon: "▤", title: "Education", description: "The share of adults with a bachelor’s degree or higher.", metrics: ["bachelors"] },
+  { icon: "↗", title: "Employment", description: "Unemployment and working from home.", metrics: ["unemployment", "workFromHome"] },
+  { icon: "◎", title: "Families & households", description: "Family households and average household size.", metrics: ["familyHouseholds", "householdSize"] },
+  { icon: "A", title: "Language & birthplace", description: "Languages spoken at home and residents born outside the United States.", metrics: ["nonEnglish", "foreignBorn"] },
+  { icon: "→", title: "Transportation", description: "Public-transit commuting and households without a vehicle.", metrics: ["transit", "noVehicle", "workFromHome"] },
+];
+
 function readSessionKey() {
   try { return sessionStorage.getItem("census-api-key") || ""; }
   catch { return ""; }
@@ -61,6 +79,7 @@ const state = {
   county: params.get("county") || "",
   year: Math.min(2024, Math.max(2015, Number(params.get("year")) || 2024)),
   record: null,
+  benchmarkRecord: null,
   trends: [],
   trendMetric: "population",
   comparePlaces: [{ state: "24", county: "" }, { state: "51", county: "" }, { state: "06", county: "" }],
@@ -68,6 +87,10 @@ const state = {
   mapRecords: [],
   mapGeometry: null,
   mapPath: null,
+  mapGeometryKey: "",
+  mapTopology: null,
+  mapLevel: "state",
+  mapYear: Math.min(2024, Math.max(2015, Number(params.get("year")) || 2024)),
   mapGeometryFailed: false,
   customRows: [],
   mode: "loading",
@@ -78,19 +101,78 @@ function initOptions() {
   const stateOptions = STATES.map(({ fips, name }) => `<option value="${fips}">${name}</option>`).join("");
   elements.state.innerHTML = stateOptions;
   elements.compareSelect.innerHTML = stateOptions;
+  elements.mapState.innerHTML = stateOptions;
   elements.state.value = state.fips;
   elements.compareSelect.value = "36";
   const yearOptions = Array.from({ length: 10 }, (_, index) => 2024 - index)
     .map((year) => `<option value="${year}">${year}</option>`).join("");
   elements.year.innerHTML = yearOptions;
   elements.compareYear.innerHTML = yearOptions;
+  elements.mapYear.innerHTML = yearOptions;
+  elements.mapMetric.innerHTML = Object.entries(METRIC_META).map(([key, meta]) => `<option value="${key}">${meta.label}</option>`).join("");
   elements.year.value = String(state.year);
   elements.compareYear.value = String(state.year);
+  elements.mapYear.value = String(state.mapYear);
+  elements.mapState.value = state.fips;
+}
+
+function renderTopics() {
+  elements.topics.innerHTML = TOPICS.map((topic, index) => `
+    <article class="topic-card">
+      <div class="topic-number">${String(index + 1).padStart(2, "0")}</div>
+      <div class="topic-icon" aria-hidden="true">${topic.icon}</div>
+      <h3>${topic.title}</h3><p>${topic.description}</p>
+      <div class="topic-actions">${topic.metrics.length ? topic.metrics.map((key) => `<button data-topic-metric="${key}">${METRIC_META[key].label} <span>→</span></button>`).join("") : '<span class="coming-note">More ACS measures coming next</span>'}</div>
+    </article>`).join("");
+}
+
+function searchItems(query) {
+  const value = query.trim().toLowerCase();
+  if (!value) return [];
+  const places = STATES.filter((item) => `${item.name} ${item.abbreviation}`.toLowerCase().includes(value))
+    .slice(0, 5).map((item) => ({ type: "place", key: item.fips, label: item.name, detail: "State profile" }));
+  const metrics = Object.entries(METRIC_META).filter(([, meta]) => `${meta.label} ${meta.source}`.toLowerCase().includes(value))
+    .slice(0, 5).map(([key, meta]) => ({ type: "metric", key, label: meta.label, detail: `${meta.source} map` }));
+  const counties = [...elements.county.options].filter((option) => option.value && option.textContent.toLowerCase().includes(value))
+    .slice(0, 4).map((option) => ({ type: "county", key: option.value, label: option.textContent, detail: `${STATES.find((item) => item.fips === state.fips)?.name} county profile` }));
+  return [...places, ...counties, ...metrics].slice(0, 8);
+}
+
+function renderSearchResults() {
+  const matches = searchItems(elements.search.value);
+  elements.searchResults.hidden = !matches.length;
+  elements.search.setAttribute("aria-expanded", String(Boolean(matches.length)));
+  elements.searchResults.innerHTML = matches.map((item) => `<button data-search-type="${item.type}" data-search-key="${item.key}"><span>${item.label}</span><small>${item.detail}</small></button>`).join("");
+}
+
+async function activateSearchResult(type, key) {
+  elements.searchResults.hidden = true;
+  elements.search.setAttribute("aria-expanded", "false");
+  if (type === "metric") {
+    elements.mapMetric.value = key;
+    switchSection("map");
+    return;
+  }
+  if (type === "county") {
+    state.county = key;
+    elements.county.value = key;
+    switchSection("overview");
+    await loadProfile();
+    return;
+  }
+  state.fips = key;
+  state.county = "";
+  elements.state.value = key;
+  elements.mapState.value = key;
+  if (state.apiKey) await loadCounties();
+  else elements.county.innerHTML = '<option value="">Entire state</option>';
+  switchSection("overview");
+  await loadProfile();
 }
 
 function renderSkeleton() {
   elements.kpis.setAttribute("aria-busy", "true");
-  elements.kpis.innerHTML = Object.keys(METRIC_META).map((key, index) => `
+  elements.kpis.innerHTML = FEATURED_METRICS.map((key, index) => `
     <article class="kpi-card" data-index="${String(index + 1).padStart(2, "0")}">
       <div class="kpi-label">${METRIC_META[key].label}</div>
       <div class="kpi-value skeleton">&nbsp;</div>
@@ -149,6 +231,13 @@ async function fetchRecord({ fips, county = "", year = state.year }) {
   return record;
 }
 
+async function fetchBenchmark() {
+  const geography = state.county ? "state" : "us";
+  const url = buildCensusUrl({ year: state.year, geography, state: state.fips, variables: VARIABLES, apiKey: state.apiKey });
+  const [record] = parseCensusResponse(await fetchJson(url));
+  return record;
+}
+
 async function fetchTrends() {
   const years = Array.from({ length: 6 }, (_, index) => state.year - 5 + index).filter((year) => year >= 2015);
   const variables = ["NAME", "B01003_001E", "B19013_001E"];
@@ -170,16 +259,19 @@ async function loadProfile() {
   syncUrl();
   try {
     if (!state.apiKey) throw new Error("A Census API key is required for live data.");
-    const [record, trends] = await Promise.all([
+    const [record, trends, benchmark] = await Promise.all([
       fetchRecord({ fips: state.fips, county: state.county }),
       fetchTrends(),
+      fetchBenchmark(),
     ]);
     state.record = record;
     state.trends = trends;
+    state.benchmarkRecord = benchmark;
     setStatus("live", `Live ${state.year} ACS 5-year estimates · U.S. Census Bureau`);
   } catch (error) {
     const selected = STATES.find((item) => item.fips === state.fips);
     state.record = { ...DEMO_RECORD, NAME: `${selected.name} (demo profile)`, state: state.fips };
+    state.benchmarkRecord = { ...DEMO_RECORD, NAME: state.county ? selected.name : "United States", B19013_001E: 80310, B25077_001E: 332700, B17001_002E: 720000, B25003_002E: 1530000 };
     state.trends = DEMO_TRENDS.map((row) => ({ ...row, year: row.year + (state.year - 2024) }));
     setStatus("demo", state.apiKey
       ? "Live request failed · Check your API key or retry · Showing demo data"
@@ -187,7 +279,6 @@ async function loadProfile() {
     console.warn(error);
   }
   renderProfile();
-  await loadMapData();
 }
 
 function renderProfile() {
@@ -196,7 +287,8 @@ function renderProfile() {
   elements.place.textContent = state.record.NAME.replace(/, [A-Z][a-z].*$/, "");
   elements.profileYear.textContent = `${state.year} estimates`;
   elements.kpis.removeAttribute("aria-busy");
-  elements.kpis.innerHTML = Object.entries(METRIC_META).map(([key, meta], index) => {
+  elements.kpis.innerHTML = FEATURED_METRICS.map((key, index) => {
+    const meta = METRIC_META[key];
     const item = metrics[key];
     const trendValue = key === "population" ? metricDelta(item.value, previous.population) : key === "income" ? metricDelta(item.value, previous.income) : null;
     const note = Number.isFinite(item.moe) && item.moe > 0
@@ -212,6 +304,21 @@ function renderProfile() {
   renderRace();
   renderCommunityProfile(metrics);
   renderInsight(metrics);
+  renderProfileContext(metrics);
+}
+
+function renderProfileContext(metrics) {
+  const benchmark = computeMetrics(state.benchmarkRecord || {});
+  const benchmarkName = state.benchmarkRecord?.NAME?.split(",")[0] || (state.county ? "State" : "United States");
+  const keys = ["income", "poverty", "homeValue", "bachelors"];
+  elements.context.innerHTML = keys.map((key) => {
+    const current = metrics[key].value;
+    const reference = benchmark[key].value;
+    const difference = Number.isFinite(current) && Number.isFinite(reference) ? current - reference : null;
+    const direction = Number.isFinite(difference) ? (difference >= 0 ? "above" : "below") : "unavailable";
+    const amount = Number.isFinite(difference) ? formatMetric(Math.abs(difference), METRIC_META[key].unit) : "Not available";
+    return `<article><span>${METRIC_META[key].label}</span><strong>${Number.isFinite(difference) ? `${amount} ${direction}` : amount}</strong><small>Compared with ${benchmarkName}</small></article>`;
+  }).join("");
 }
 
 function renderTrend() {
@@ -272,19 +379,32 @@ function renderInsight(metrics) {
 }
 
 async function loadMapData() {
+  state.mapLevel = elements.mapLevel.value;
+  state.mapYear = Number(elements.mapYear.value);
+  const mapStateFips = elements.mapState.value || state.fips;
+  elements.mapStateControl.hidden = state.mapLevel !== "county";
+  elements.map.className = "geo-map map-loading";
+  elements.map.textContent = "Loading map data…";
   if (state.apiKey) {
     try {
-      const url = buildCensusUrl({ year: state.year, geography: "state", state: "*", variables: VARIABLES, apiKey: state.apiKey });
+      const url = buildCensusUrl({
+        year: state.mapYear,
+        geography: state.mapLevel,
+        state: state.mapLevel === "state" ? "*" : mapStateFips,
+        county: "*",
+        variables: VARIABLES,
+        apiKey: state.apiKey,
+      });
       state.mapRecords = parseCensusResponse(await fetchJson(url));
-      elements.mapStatus.textContent = `Live ${state.year} ACS data`;
-      await ensureMapGeometry();
+      elements.mapStatus.textContent = `Live ${state.mapYear} ACS 5-year data`;
+      await ensureMapGeometry(state.mapLevel, mapStateFips);
       renderMap();
       return;
     } catch (error) {
       console.warn(error);
     }
   }
-  state.mapRecords = STATES.map((item, index) => {
+  state.mapRecords = state.mapLevel === "state" ? STATES.map((item, index) => {
     const factor = .35 + ((Number(item.fips) * 17) % 90) / 50;
     return {
       ...DEMO_RECORD, NAME: item.name, state: item.fips,
@@ -293,9 +413,11 @@ async function loadMapData() {
       B17001_002E: Math.round(DEMO_RECORD.B17001_001E * (.06 + ((index * 7) % 14) / 100)),
       B25003_002E: Math.round(DEMO_RECORD.B25003_001E * (.48 + ((index * 5) % 28) / 100)),
     };
-  });
-  elements.mapStatus.textContent = "Illustrative demo pattern · Add API key for live values";
-  await ensureMapGeometry();
+  }) : [];
+  elements.mapStatus.textContent = state.mapLevel === "state"
+    ? "Illustrative state pattern · Add an API key for live values"
+    : "Add an API key to load county values";
+  await ensureMapGeometry(state.mapLevel, mapStateFips);
   renderMap();
 }
 
@@ -309,34 +431,44 @@ function renderMap() {
   const meta = METRIC_META[metricKey];
   const rows = state.mapRecords.map((record) => ({
     record, value: computeMetrics(record)[metricKey]?.value,
+    key: state.mapLevel === "county" ? `${record.state}${record.county}` : record.state,
+    name: record.NAME?.split(",")[0] || "Unknown area",
     stateInfo: STATES.find((item) => item.fips === record.state),
-  })).filter((item) => item.stateInfo && STATE_TILES[item.stateInfo.abbreviation]);
+  })).filter((item) => state.mapLevel === "county" || (item.stateInfo && STATE_TILES[item.stateInfo.abbreviation]));
   const values = rows.map((item) => item.value).filter(Number.isFinite);
   const min = Math.min(...values), max = Math.max(...values);
   if (!state.mapGeometry) {
-    renderTileMap(rows, min, max, meta);
+    state.mapLevel === "state" ? renderTileMap(rows, min, max, meta) : renderUnavailableCountyMap(meta);
+    renderMapContext(rows, meta);
     return;
   }
-  const rowByFips = new Map(rows.map((item) => [item.record.state, item]));
+  const rowByFips = new Map(rows.map((item) => [item.key, item]));
+  const geographyLabel = state.mapLevel === "county" ? `counties in ${STATES.find((item) => item.fips === elements.mapState.value)?.name}` : "states";
+  elements.mapTitle.textContent = `${meta.label} across ${geographyLabel}`;
   elements.map.className = "geo-map";
   elements.map.innerHTML = `<svg viewBox="0 0 975 610" role="img" aria-labelledby="map-title map-description">
-    <title id="map-title">United States ${meta.label} map</title>
-    <desc id="map-description">State boundaries colored from lower to higher ${meta.label.toLowerCase()}. Select a state to open its profile.</desc>
+    <title id="map-title">${meta.label} across ${geographyLabel}</title>
+    <desc id="map-description">Areas are colored from lower to higher ${meta.label.toLowerCase()}. Select an area to open its profile.</desc>
     ${state.mapGeometry.map((feature) => {
-      const fips = String(feature.id).padStart(2, "0");
+      const fips = String(feature.id).padStart(state.mapLevel === "county" ? 5 : 2, "0");
       const item = rowByFips.get(fips);
       const value = item?.value;
-      const stateInfo = item?.stateInfo || STATES.find((candidate) => candidate.fips === fips);
-      if (!stateInfo) return "";
+      const stateFips = state.mapLevel === "county" ? fips.slice(0, 2) : fips;
+      const countyFips = state.mapLevel === "county" ? fips.slice(2) : "";
+      const stateInfo = item?.stateInfo || STATES.find((candidate) => candidate.fips === stateFips);
+      if (!stateInfo || (state.mapLevel === "state" && !item)) return "";
       const shade = Number.isFinite(value) ? Math.round(((value - min) / (max - min || 1)) * 100) : 0;
-      const label = `${stateInfo.name}: ${formatMetric(value, meta.unit)}`;
+      const areaName = item?.name || `County ${countyFips}`;
+      const label = `${areaName}: ${formatMetric(value, meta.unit)}`;
       const path = state.mapPath(feature);
       if (!path) return "";
-      return `<path class="geo-state ${Number.isFinite(value) ? "" : "no-data"} ${fips === state.fips ? "selected" : ""}" d="${path}" style="--shade:${14 + shade * .72}%" data-map-state="${fips}" tabindex="0" role="button" aria-label="${label}"></path>`;
+      const selected = state.mapLevel === "state" ? stateFips === state.fips : stateFips === state.fips && countyFips === state.county;
+      return `<path class="geo-state ${Number.isFinite(value) ? "" : "no-data"} ${selected ? "selected" : ""}" d="${path}" style="--shade:${14 + shade * .72}%" data-map-state="${stateFips}" data-map-county="${countyFips}" tabindex="0" role="button" aria-label="${label}"></path>`;
     }).join("")}
   </svg><div class="map-tooltip" role="tooltip" hidden></div>`;
   $("#map-low").textContent = Number.isFinite(min) ? formatMetric(min, meta.unit) : "Lower";
   $("#map-high").textContent = Number.isFinite(max) ? formatMetric(max, meta.unit) : "Higher";
+  renderMapContext(rows, meta);
 }
 
 function renderTileMap(rows, min, max, meta) {
@@ -351,26 +483,70 @@ function renderTileMap(rows, min, max, meta) {
   $("#map-high").textContent = Number.isFinite(max) ? formatMetric(max, meta.unit) : "Higher";
 }
 
-async function ensureMapGeometry() {
-  if (state.mapGeometry || state.mapGeometryFailed) return;
+function renderUnavailableCountyMap(meta) {
+  const stateName = STATES.find((item) => item.fips === elements.mapState.value)?.name || "this state";
+  elements.map.className = "geo-map map-empty";
+  elements.map.innerHTML = `<div><strong>${meta.label} by county</strong><p>Add a Census API key to load live county values for ${stateName}.</p><button class="outline-button" data-open-key>Use an API key</button></div>`;
+  $("#map-low").textContent = "Lower";
+  $("#map-high").textContent = "Higher";
+}
+
+function renderMapContext(rows, meta) {
+  const ranked = rows.filter((item) => Number.isFinite(item.value)).sort((a, b) => b.value - a.value);
+  const values = ranked.map((item) => item.value).sort((a, b) => a - b);
+  const median = values.length ? values[Math.floor(values.length / 2)] : null;
+  elements.mapSummary.innerHTML = [
+    ["Median", median],
+    ["Lowest", values.at(0)],
+    ["Highest", values.at(-1)],
+    ["Areas", values.length],
+  ].map(([label, value]) => `<div><span>${label}</span><strong>${label === "Areas" ? value : formatMetric(value, meta.unit)}</strong></div>`).join("");
+  if (!values.length) {
+    elements.mapDistribution.innerHTML = '<p class="empty-note">Live values appear here after you add an API key.</p>';
+    elements.mapRanking.innerHTML = "";
+    elements.mapLowest.innerHTML = "";
+    return;
+  }
+  const binCount = Math.min(8, Math.max(3, Math.ceil(Math.sqrt(values.length))));
+  const min = values[0], max = values.at(-1), width = (max - min || 1) / binCount;
+  const bins = Array.from({ length: binCount }, (_, index) => ({ start: min + width * index, count: 0 }));
+  values.forEach((value) => bins[Math.min(binCount - 1, Math.floor((value - min) / width))].count++);
+  const largest = Math.max(...bins.map((bin) => bin.count), 1);
+  elements.mapDistribution.innerHTML = `<div class="histogram">${bins.map((bin) => `<div style="--height:${Math.max(5, bin.count / largest * 100)}%" title="${bin.count} areas"><i></i><span>${formatMetric(bin.start, meta.unit)}</span></div>`).join("")}</div>`;
+  elements.mapRanking.innerHTML = ranked.slice(0, 8).map((item) => `<li><button data-map-state="${item.record.state}" data-map-county="${item.record.county || ""}"><span>${item.name}</span><strong>${formatMetric(item.value, meta.unit)}</strong></button></li>`).join("");
+  elements.mapLowest.innerHTML = ranked.slice(-8).reverse().map((item) => `<li><button data-map-state="${item.record.state}" data-map-county="${item.record.county || ""}"><span>${item.name}</span><strong>${formatMetric(item.value, meta.unit)}</strong></button></li>`).join("");
+}
+
+async function ensureMapGeometry(level = "state", stateFips = state.fips) {
+  const geometryKey = `${level}:${level === "county" ? stateFips : "us"}`;
+  if (state.mapGeometryKey === geometryKey && (state.mapGeometry || state.mapGeometryFailed)) return;
   elements.map.className = "geo-map map-loading";
   elements.map.textContent = "Loading geographic boundaries…";
   try {
-    const [{ feature }, d3Geo, response] = await Promise.all([
+    const [{ feature }, d3Geo] = await Promise.all([
       import("https://cdn.jsdelivr.net/npm/topojson-client@3/+esm"),
       import("https://cdn.jsdelivr.net/npm/d3-geo@3/+esm"),
-      fetch("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json"),
     ]);
-    if (!response.ok) throw new Error(`Boundary request failed (${response.status})`);
-    const topology = await response.json();
-    const collection = feature(topology, topology.objects.states);
+    if (!state.mapTopology) {
+      const response = await fetch("https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json");
+      if (!response.ok) throw new Error(`Boundary request failed (${response.status})`);
+      state.mapTopology = await response.json();
+    }
+    const object = level === "county" ? state.mapTopology.objects.counties : state.mapTopology.objects.states;
+    const allFeatures = feature(state.mapTopology, object).features;
+    const features = level === "county" ? allFeatures.filter((item) => String(item.id).padStart(5, "0").startsWith(stateFips)) : allFeatures;
+    const collection = { type: "FeatureCollection", features };
     const projection = d3Geo.geoAlbersUsa().fitExtent([[20, 20], [955, 590]], collection);
-    state.mapGeometry = collection.features;
+    state.mapGeometry = features;
     state.mapPath = d3Geo.geoPath(projection);
+    state.mapGeometryKey = geometryKey;
+    state.mapGeometryFailed = false;
   } catch (error) {
+    state.mapGeometry = null;
+    state.mapGeometryKey = geometryKey;
     state.mapGeometryFailed = true;
-    elements.mapStatus.textContent = `${elements.mapStatus.textContent} · Tile fallback`;
-    console.warn("Geographic boundaries unavailable; using tile fallback.", error);
+    elements.mapStatus.textContent = `${elements.mapStatus.textContent} · Boundary fallback`;
+    console.warn("Geographic boundaries unavailable.", error);
   }
 }
 
@@ -391,6 +567,7 @@ function switchSection(section) {
     panel.classList.toggle("active-section", visible);
   });
   if (section === "compare") loadComparisons();
+  if (section === "map") loadMapData();
   scrollTo({ top: Math.max(0, $(".status-bar").offsetTop - 90), behavior: "smooth" });
 }
 
@@ -431,7 +608,12 @@ function comparisonKey(place) {
 function renderComparisonTable() {
   const records = state.comparePlaces.map((place) => state.compareRecords.get(`${comparisonKey(place)}-${state.year}`)).filter(Boolean);
   const keys = ["population", "income", "age", "poverty", "homeValue", "bachelors"];
-  elements.compareTable.innerHTML = `<thead><tr><th>Indicator</th>${records.map((record) => `<th>${record.NAME.split(",")[0]}</th>`).join("")}</tr></thead><tbody>${keys.map((key) => `<tr><td>${METRIC_META[key].label}</td>${records.map((record) => `<td>${formatMetric(computeMetrics(record)[key].value, METRIC_META[key].unit)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  const baseline = records[0] ? computeMetrics(records[0]) : {};
+  elements.compareTable.innerHTML = `<thead><tr><th>Indicator</th>${records.map((record) => `<th>${record.NAME.split(",")[0]}</th>`).join("")}</tr></thead><tbody>${keys.map((key) => `<tr><td>${METRIC_META[key].label}</td>${records.map((record, index) => {
+    const value = computeMetrics(record)[key].value;
+    const difference = index && Number.isFinite(value) && Number.isFinite(baseline[key]?.value) ? value - baseline[key].value : null;
+    return `<td><strong>${formatMetric(value, METRIC_META[key].unit)}</strong>${Number.isFinite(difference) ? `<small class="comparison-delta">${difference >= 0 ? "+" : "−"}${formatMetric(Math.abs(difference), METRIC_META[key].unit)} vs first</small>` : ""}</td>`;
+  }).join("")}</tr>`).join("")}</tbody>`;
 }
 
 async function loadCompareCounties() {
@@ -558,6 +740,18 @@ function hideMapTooltip() {
   if (tooltip) tooltip.hidden = true;
 }
 
+async function openMapArea(fips, county = "") {
+  elements.state.value = fips;
+  state.fips = fips;
+  state.county = county;
+  if (state.apiKey) await loadCounties();
+  else elements.county.innerHTML = '<option value="">Entire state</option>';
+  elements.county.value = county;
+  switchSection("overview");
+  await loadProfile();
+  scrollTo({ top: Math.max(0, $(".status-bar").offsetTop - 90), behavior: "smooth" });
+}
+
 function bindEvents() {
   elements.state.addEventListener("change", async () => {
     state.fips = elements.state.value; state.county = "";
@@ -583,17 +777,46 @@ function bindEvents() {
   });
   elements.export.addEventListener("click", () => elements.dialog.showModal());
   $$("[data-export]").forEach((button) => button.addEventListener("click", () => download(button.dataset.export)));
+  elements.search.addEventListener("input", renderSearchResults);
+  elements.search.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") { elements.search.value = ""; renderSearchResults(); elements.search.blur(); }
+    if (event.key === "Enter") elements.searchResults.querySelector("button")?.click();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) {
+      event.preventDefault();
+      elements.search.focus();
+    }
+  });
+  elements.searchResults.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-search-type]");
+    if (button) activateSearchResult(button.dataset.searchType, button.dataset.searchKey);
+  });
+  elements.topics.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-topic-metric]");
+    if (!button) return;
+    elements.mapMetric.value = button.dataset.topicMetric;
+    switchSection("map");
+  });
   elements.mapMetric.addEventListener("change", renderMap);
+  elements.mapLevel.addEventListener("change", loadMapData);
+  elements.mapState.addEventListener("change", loadMapData);
+  elements.mapYear.addEventListener("change", loadMapData);
   elements.map.addEventListener("click", async (event) => {
+    if (event.target.closest("[data-open-key]")) return elements.apiKeyButton.click();
     const fips = event.target.dataset.mapState;
     if (!fips) return;
-    elements.state.value = fips;
-    state.fips = fips;
-    state.county = "";
-    if (state.apiKey) await loadCounties();
-    else elements.county.innerHTML = '<option value="">Entire state</option>';
-    await loadProfile();
-    scrollTo({ top: Math.max(0, $(".status-bar").offsetTop - 90), behavior: "smooth" });
+    const county = event.target.dataset.mapCounty || "";
+    await openMapArea(fips, county);
+  });
+  elements.mapRanking.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-map-state]");
+    if (!button) return;
+    openMapArea(button.dataset.mapState, button.dataset.mapCounty || "");
+  });
+  elements.mapLowest.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-map-state]");
+    if (button) openMapArea(button.dataset.mapState, button.dataset.mapCounty || "");
   });
   elements.map.addEventListener("keydown", (event) => {
     if ((event.key === "Enter" || event.key === " ") && event.target.dataset.mapState) {
@@ -670,6 +893,7 @@ function bindEvents() {
     await loadCounties();
     await loadCompareCounties();
     await loadProfile();
+    if (document.body.dataset.section === "map") await loadMapData();
   });
   elements.forgetKey.addEventListener("click", async () => {
     state.apiKey = "";
@@ -690,6 +914,7 @@ async function init() {
   if (storedTheme) document.documentElement.dataset.theme = storedTheme;
   else if (matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.dataset.theme = "dark";
   initOptions();
+  renderTopics();
   elements.apiKeyButton.textContent = state.apiKey ? "Manage API key" : "Add API key";
   renderSkeleton();
   bindEvents();

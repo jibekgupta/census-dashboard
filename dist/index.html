@@ -19,6 +19,8 @@
     </a>
     <nav aria-label="Primary navigation">
       <button class="nav-link active" data-section="overview">Overview</button>
+      <button class="nav-link" data-section="topics">Topics</button>
+      <button class="nav-link" data-section="map">Map</button>
       <button class="nav-link" data-section="compare">Compare</button>
       <button class="nav-link" data-section="explorer">Data Explorer</button>
       <button class="nav-link" data-section="methodology">Methodology</button>
@@ -41,6 +43,11 @@
           <span class="note-number">01</span>
           <p>Official ACS data,<br>in plain view.</p>
         </div>
+      </div>
+      <div class="atlas-search">
+        <label for="atlas-search-input">Find a state or measure</label>
+        <div class="search-box"><span aria-hidden="true">⌕</span><input id="atlas-search-input" type="search" autocomplete="off" placeholder="Try California, poverty, home value…" aria-controls="atlas-search-results" aria-expanded="false"><kbd>/</kbd></div>
+        <div id="atlas-search-results" class="search-results" hidden></div>
       </div>
     </section>
 
@@ -82,6 +89,11 @@
 
       <div id="kpi-grid" class="kpi-grid" aria-busy="true"></div>
 
+      <div class="profile-context">
+        <div><span class="kicker">Context</span><h3>How this place compares</h3></div>
+        <div id="profile-context-grid" class="context-grid"></div>
+      </div>
+
       <div class="editorial-grid">
         <article class="panel trend-panel">
           <div class="panel-heading">
@@ -92,6 +104,7 @@
             </div>
           </div>
           <div id="trend-chart" class="chart" aria-label="Population trend chart"></div>
+          <p class="chart-note">Adjacent ACS 5-year estimates overlap. Use them as a trend, not as independent five-year periods.</p>
         </article>
 
         <article class="panel insight-panel">
@@ -113,19 +126,39 @@
         </article>
       </div>
 
-      <article class="panel map-panel">
-        <div class="panel-heading map-heading">
-          <div><span class="kicker">Geographic pattern</span><h3>U.S. state map</h3><p>Hover over a state to see its value. Select it to open the full profile.</p></div>
-          <select id="map-metric-select" aria-label="Map metric">
-            <option value="population">Population</option>
-            <option value="income">Median household income</option>
-            <option value="poverty">Poverty rate</option>
-            <option value="homeownership">Homeownership</option>
-          </select>
-        </div>
-        <div id="state-map" class="geo-map" aria-label="United States state choropleth map"></div>
-        <div class="map-footer"><span id="map-low">Lower</span><span class="map-gradient" aria-hidden="true"></span><span id="map-high">Higher</span><span id="map-status">Add an API key for live state values</span></div>
-      </article>
+    </section>
+
+    <section id="topics-section" class="dashboard-section" hidden>
+      <div class="section-heading">
+        <div><span class="kicker">Browse the ACS</span><h2>Explore by topic</h2></div>
+        <p>Start with a question, then open any measure on the map.</p>
+      </div>
+      <div id="topics-grid" class="topics-grid"></div>
+    </section>
+
+    <section id="map-section" class="dashboard-section" hidden>
+      <div class="section-heading">
+        <div><span class="kicker">Map explorer</span><h2 id="map-title-heading">Population across states</h2></div>
+        <p>Hover for a value. Select an area to open its profile.</p>
+      </div>
+      <div class="map-toolbar" aria-label="Map controls">
+        <label><span>Geography</span><select id="map-level-select"><option value="state">States</option><option value="county">Counties in a state</option></select></label>
+        <label id="map-state-control" hidden><span>State</span><select id="map-state-select"></select></label>
+        <label><span>Measure</span><select id="map-metric-select" aria-label="Map metric"></select></label>
+        <label><span>Year</span><select id="map-year-select" aria-label="Map year"></select></label>
+      </div>
+      <div class="map-explorer-grid">
+        <article class="panel map-panel">
+          <div id="state-map" class="geo-map" aria-label="ACS choropleth map"></div>
+          <div class="map-footer"><span id="map-low">Lower</span><span class="map-gradient" aria-hidden="true"></span><span id="map-high">Higher</span><span id="map-status">Add an API key for live values</span></div>
+        </article>
+        <aside class="map-context">
+          <div id="map-summary" class="map-summary"></div>
+          <article class="panel"><span class="kicker">Distribution</span><div id="map-distribution" class="distribution-chart"></div></article>
+          <article class="panel ranking-panel"><span class="kicker">Highest values</span><ol id="map-ranking"></ol></article>
+          <article class="panel ranking-panel"><span class="kicker">Lowest values</span><ol id="map-lowest"></ol></article>
+        </aside>
+      </div>
     </section>
 
     <section id="compare-section" class="dashboard-section" hidden>
@@ -173,6 +206,7 @@
         <article><span>02</span><h3>Uncertainty</h3><p>ACS figures are survey estimates. Published 90% margins of error appear with headline measures when available. Calculated rates do not include margins of error.</p></article>
         <article><span>03</span><h3>Availability</h3><p>ACS 5-year data cover every state and county. If the API is unavailable, the dashboard switches to a clearly labeled demo dataset.</p></article>
         <article><span>04</span><h3>Privacy</h3><p>The dashboard uses no accounts or analytics. A Census API key stays in the current browser tab and is sent only to api.census.gov.</p></article>
+        <article><span>05</span><h3>Comparability</h3><p>Adjacent ACS 5-year estimates share four years of survey responses. For non-overlapping comparisons, compare 2015–2019 with 2020–2024 and check Census variable-change notes.</p></article>
       </div>
       <a class="source-link" href="https://www.census.gov/programs-surveys/acs/guidance/estimates.html" target="_blank" rel="noreferrer">Read the Census Bureau’s ACS guidance <span>↗</span></a>
     </section>

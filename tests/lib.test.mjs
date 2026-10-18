@@ -22,6 +22,12 @@ test("buildCensusUrl creates a county query scoped to a state", () => {
   assert.equal(url.searchParams.get("in"), "state:06");
 });
 
+test("buildCensusUrl creates a national ACS 5-year query", () => {
+  const url = new URL(buildCensusUrl({ year: 2024, geography: "us", variables: ["NAME", "B01003_001E"] }));
+  assert.equal(url.searchParams.get("for"), "us:1");
+  assert.equal(url.pathname, "/data/2024/acs/acs5");
+});
+
 test("buildCensusUrl includes a user key only when supplied", () => {
   const keyed = new URL(buildCensusUrl({ year: 2024, geography: "state", state: "24", variables: ["NAME"], apiKey: "example-key" }));
   const anonymous = new URL(buildCensusUrl({ year: 2024, geography: "state", state: "24", variables: ["NAME"] }));
@@ -61,10 +67,30 @@ test("computeMetrics calculates rates and handles unavailable values", () => {
   assert.equal(values.bachelors.value, 31.4);
 });
 
+test("computeMetrics derives topic rates used by the atlas", () => {
+  const values = computeMetrics({
+    B03002_001E: 1000, B03002_003E: 400, B03002_012E: 200,
+    B05002_001E: 1000, B05002_013E: 150,
+    B16001_001E: 900, B16001_002E: 675,
+    B11001_001E: 400, B11001_002E: 260,
+    B08201_001E: 400, B08201_002E: 40,
+    B08301_001E: 500, B08301_010E: 50, B08301_021E: 75,
+  });
+  assert.equal(values.white.value, 40);
+  assert.equal(values.hispanic.value, 20);
+  assert.equal(values.foreignBorn.value, 15);
+  assert.equal(values.nonEnglish.value, 25);
+  assert.equal(values.familyHouseholds.value, 65);
+  assert.equal(values.noVehicle.value, 10);
+  assert.equal(values.transit.value, 10);
+  assert.equal(values.workFromHome.value, 15);
+});
+
 test("formatMetric formats compact values, currency, and percentages", () => {
   assert.equal(formatMetric(1250000, "number"), "1.25M");
   assert.equal(formatMetric(85400, "currency"), "$85.4K");
   assert.equal(formatMetric(12.34, "percent"), "12.3%");
+  assert.equal(formatMetric(2.618, "decimal"), "2.62");
   assert.equal(formatMetric(null, "number"), "Not available");
 });
 
