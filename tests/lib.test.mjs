@@ -21,6 +21,13 @@ test("buildCensusUrl creates a county query scoped to a state", () => {
   assert.equal(url.searchParams.get("in"), "state:06");
 });
 
+test("buildCensusUrl includes a user key only when supplied", () => {
+  const keyed = new URL(buildCensusUrl({ year: 2024, geography: "state", state: "24", variables: ["NAME"], apiKey: "example-key" }));
+  const anonymous = new URL(buildCensusUrl({ year: 2024, geography: "state", state: "24", variables: ["NAME"] }));
+  assert.equal(keyed.searchParams.get("key"), "example-key");
+  assert.equal(anonymous.searchParams.has("key"), false);
+});
+
 test("parseCensusResponse converts numeric fields while preserving identifiers", () => {
   const result = parseCensusResponse([
     ["NAME", "B01003_001E", "state", "county"],

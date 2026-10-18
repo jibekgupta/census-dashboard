@@ -117,7 +117,8 @@ h1 em { font-family: "Newsreader", Georgia, serif; color: var(--orange); font-we
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #d59b36; }
 .status-dot.live { background: #63a66d; }
 .status-dot.demo { background: var(--orange); }
-.status-bar .text-button { margin-left: auto; text-decoration: underline; }
+.status-bar .text-button { text-decoration: underline; }
+.status-bar #api-key-button { margin-left: auto; }
 
 .dashboard-section { padding: 64px 0 100px; }
 .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; margin-bottom: 34px; }
@@ -199,6 +200,13 @@ dialog form { padding: 30px; }
 .dialog-heading h2 { margin: .3rem 0; font-size: 34px; letter-spacing: -.04em; }
 dialog p { color: var(--muted); }
 .export-actions { display: flex; gap: .7rem; margin-top: 1.5rem; }
+.input-label { display: block; margin: 1.5rem 0 .45rem; font-size: 12px; font-weight: 600; }
+.key-input-row { display: grid; grid-template-columns: 1fr auto; gap: .55rem; }
+.key-input-row input { min-width: 0; width: 100%; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: .75rem .85rem; font: inherit; }
+.key-input-row input:focus { outline: 3px solid var(--orange); outline-offset: 2px; }
+.key-help { font-size: 12px; }
+.key-help a { color: var(--ink); text-underline-offset: 3px; }
+.key-actions { flex-wrap: wrap; }
 .toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 30px); opacity: 0; pointer-events: none; background: var(--ink); color: var(--paper); padding: .75rem 1rem; z-index: 50; transition: .25s; box-shadow: var(--shadow); }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 

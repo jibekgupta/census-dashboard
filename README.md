@@ -16,6 +16,7 @@ unavailable or requires a key.
 - CSV and JSON export
 - Dark/light theme, keyboard navigation, reduced-motion support, and responsive layout
 - No account or backend required for the bundled demo experience
+- Optional per-tab API key entry for live Census data; keys are never persisted
 
 ## Run locally
 
@@ -44,11 +45,13 @@ rounding. ACS estimates are not a population census and should not be treated
 as exact counts.
 
 The Census Bureau may require an API key for production requests. This static
-release never embeds a secret in browser code. If a live Census request is
+release never embeds a shared secret in browser code. Visitors can provide their
+own Census API key; it is held only in `sessionStorage`, sent directly to
+`api.census.gov`, and removed when the tab closes. It is not placed in the page
+URL, analytics, exports, or source control. If no key is present or a request is
 rejected, the status bar changes to orange and every fallback place name is
-marked “demo profile.” For a permanently live public deployment, route requests
-through a small server-side proxy and keep `CENSUS_API_KEY` in that host's secret
-manager.
+marked “demo profile.” A shared-key deployment should instead use a server-side
+proxy and keep `CENSUS_API_KEY` in that host's secret manager.
 
 ## Deployment
 

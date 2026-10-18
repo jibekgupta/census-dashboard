@@ -16,7 +16,22 @@ const elements = {
   share: $("#share-button"), export: $("#export-button"), dialog: $("#export-dialog"),
   toast: $("#toast"), compareSelect: $("#compare-state-select"),
   compareCards: $("#comparison-cards"), compareTable: $("#comparison-table"),
+  apiKeyButton: $("#api-key-button"), apiKeyDialog: $("#api-key-dialog"),
+  apiKeyForm: $("#api-key-form"), apiKeyInput: $("#api-key-input"),
+  showKey: $("#show-key-button"), forgetKey: $("#forget-key-button"),
 };
+
+function readSessionKey() {
+  try { return sessionStorage.getItem("census-api-key") || ""; }
+  catch { return ""; }
+}
+
+function writeSessionKey(value) {
+  try {
+    if (value) sessionStorage.setItem("census-api-key", value);
+    else sessionStorage.removeItem("census-api-key");
+  } catch { /* The dashboard still works in demo mode when storage is blocked. */ }
+}
 
 const params = new URLSearchParams(location.search);
 const state = {
@@ -29,6 +44,7 @@ const state = {
   compareFips: ["24", "51", "06"],
   compareRecords: new Map(),
   mode: "loading",
+  apiKey: readSessionKey(),
 };
 
 function initOptions() {
@@ -76,7 +92,7 @@ async function loadCounties() {
   elements.county.disabled = true;
   elements.county.innerHTML = '<option value="">Loading counties…</option>';
   try {
-    const url = buildCensusUrl({ year: state.year, geography: "county", state: state.fips, county: "*", variables: ["NAME"] });
+    const url = buildCensusUrl({ year: state.year, geography: "county", state: state.fips, county: "*", variables: ["NAME"], apiKey: state.apiKey });
     const counties = parseCensusResponse(await fetchJson(url));
     elements.county.innerHTML = '<option value="">Entire state</option>' + counties
       .sort((a, b) => a.NAME.localeCompare(b.NAME))
@@ -92,7 +108,7 @@ async function loadCounties() {
 }
 
 async function fetchRecord({ fips, county = "", year = state.year }) {
-  const url = buildCensusUrl({ year, geography: county ? "county" : "state", state: fips, county, variables: VARIABLES });
+  const url = buildCensusUrl({ year, geography: county ? "county" : "state", state: fips, county, variables: VARIABLES, apiKey: state.apiKey });
   const [record] = parseCensusResponse(await fetchJson(url));
   if (!record) throw new Error("No Census observation was returned.");
   return record;
@@ -102,7 +118,7 @@ async function fetchTrends() {
   const years = Array.from({ length: 6 }, (_, index) => state.year - 5 + index).filter((year) => year >= 2015);
   const variables = ["NAME", "B01003_001E", "B19013_001E"];
   const rows = await Promise.all(years.map(async (year) => {
-    const url = buildCensusUrl({ year, geography: state.county ? "county" : "state", state: state.fips, county: state.county, variables });
+    const url = buildCensusUrl({ year, geography: state.county ? "county" : "state", state: state.fips, county: state.county, variables, apiKey: state.apiKey });
     const [record] = parseCensusResponse(await fetchJson(url));
     return { year, population: record?.B01003_001E ?? null, income: record?.B19013_001E ?? null };
   }));
@@ -117,6 +133,7 @@ async function loadProfile() {
   state.year = Number(elements.year.value);
   syncUrl();
   try {
+    if (!state.apiKey) throw new Error("A Census API key is required for live data.");
     const [record, trends] = await Promise.all([
       fetchRecord({ fips: state.fips, county: state.county }),
       fetchTrends(),
@@ -128,7 +145,9 @@ async function loadProfile() {
     const selected = STATES.find((item) => item.fips === state.fips);
     state.record = { ...DEMO_RECORD, NAME: `${selected.name} (demo profile)`, state: state.fips };
     state.trends = DEMO_TRENDS.map((row) => ({ ...row, year: row.year + (state.year - 2024) }));
-    setStatus("demo", "Census API unavailable · Showing a clearly labeled demo profile");
+    setStatus("demo", state.apiKey
+      ? "Live request failed · Check your API key or retry · Showing demo data"
+      : "Demo mode · Add a free Census API key for live data");
     console.warn(error);
   }
   renderProfile();
@@ -286,7 +305,11 @@ function toast(message) {
 }
 
 function bindEvents() {
-  elements.state.addEventListener("change", async () => { state.fips = elements.state.value; state.county = ""; await loadCounties(); });
+  elements.state.addEventListener("change", async () => {
+    state.fips = elements.state.value; state.county = "";
+    if (state.apiKey) await loadCounties();
+    else elements.county.innerHTML = '<option value="">Entire state</option>';
+  });
   elements.explore.addEventListener("click", loadProfile);
   elements.retry.addEventListener("click", loadProfile);
   $$(".nav-link").forEach((button) => button.addEventListener("click", () => switchSection(button.dataset.section)));
@@ -318,6 +341,45 @@ function bindEvents() {
     state.compareFips = state.compareFips.filter((item) => item !== fips);
     loadComparisons();
   });
+  elements.apiKeyButton.addEventListener("click", () => {
+    elements.apiKeyInput.value = state.apiKey;
+    elements.apiKeyInput.type = "password";
+    elements.showKey.textContent = "Show";
+    elements.showKey.setAttribute("aria-pressed", "false");
+    elements.forgetKey.hidden = !state.apiKey;
+    elements.apiKeyDialog.showModal();
+    elements.apiKeyInput.focus();
+  });
+  $("[data-close-key]").addEventListener("click", () => elements.apiKeyDialog.close());
+  elements.showKey.addEventListener("click", () => {
+    const show = elements.apiKeyInput.type === "password";
+    elements.apiKeyInput.type = show ? "text" : "password";
+    elements.showKey.textContent = show ? "Hide" : "Show";
+    elements.showKey.setAttribute("aria-pressed", String(show));
+  });
+  elements.apiKeyForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const apiKey = elements.apiKeyInput.value.trim();
+    if (!apiKey) return;
+    state.apiKey = apiKey;
+    writeSessionKey(apiKey);
+    elements.apiKeyButton.textContent = "Manage API key";
+    elements.apiKeyDialog.close();
+    toast("API key saved for this tab");
+    await loadCounties();
+    await loadProfile();
+  });
+  elements.forgetKey.addEventListener("click", async () => {
+    state.apiKey = "";
+    writeSessionKey("");
+    elements.apiKeyInput.value = "";
+    elements.apiKeyButton.textContent = "Add API key";
+    elements.apiKeyDialog.close();
+    elements.county.innerHTML = '<option value="">Entire state</option>';
+    state.county = "";
+    toast("API key removed from this tab");
+    await loadProfile();
+  });
 }
 
 async function init() {
@@ -325,9 +387,10 @@ async function init() {
   if (storedTheme) document.documentElement.dataset.theme = storedTheme;
   else if (matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.dataset.theme = "dark";
   initOptions();
+  elements.apiKeyButton.textContent = state.apiKey ? "Manage API key" : "Add API key";
   renderSkeleton();
   bindEvents();
-  await loadCounties();
+  if (state.apiKey) await loadCounties();
   await loadProfile();
 }
 

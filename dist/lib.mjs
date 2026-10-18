@@ -42,7 +42,7 @@ export const METRIC_META = {
   bachelors: { label: "Bachelor’s degree+", unit: "percent", source: "B15003" },
 };
 
-export function buildCensusUrl({ year, geography, state, county, variables = VARIABLES }) {
+export function buildCensusUrl({ year, geography, state, county, variables = VARIABLES, apiKey = "" }) {
   const url = new URL(`${CENSUS_BASE}/${year}/acs/acs5`);
   url.searchParams.set("get", variables.join(","));
   if (geography === "county") {
@@ -51,6 +51,7 @@ export function buildCensusUrl({ year, geography, state, county, variables = VAR
   } else {
     url.searchParams.set("for", `state:${state}`);
   }
+  if (apiKey) url.searchParams.set("key", apiKey);
   return url.toString();
 }
 
