@@ -179,6 +179,13 @@ blockquote { margin: 2rem 0; font-family: "Newsreader", Georgia, serif; font-sty
 .state-tile:hover, .state-tile:focus-visible { transform: translateY(-2px); border-color: var(--orange); z-index: 2; }
 .state-tile.selected { outline: 3px solid var(--orange); outline-offset: 1px; }
 .state-tile.no-data { background: var(--paper-2); color: var(--muted); }
+.geo-map { width: min(100%, 980px); min-height: 320px; margin: 1.5rem auto 1rem; }
+.geo-map svg { display: block; width: 100%; height: auto; overflow: visible; }
+.geo-state { fill: color-mix(in srgb, var(--forest-2) var(--shade), var(--paper)); stroke: var(--paper); stroke-width: 1.2; vector-effect: non-scaling-stroke; cursor: pointer; transition: fill .15s, stroke .15s, filter .15s; }
+.geo-state:hover, .geo-state:focus { stroke: var(--orange); stroke-width: 3; filter: brightness(1.08); outline: none; }
+.geo-state.selected { stroke: var(--orange); stroke-width: 4; }
+.geo-state.no-data { fill: var(--paper-2); }
+.map-loading { min-height: 320px; display: grid; place-items: center; color: var(--muted); }
 .map-footer { display: flex; align-items: center; gap: .6rem; color: var(--muted); font-size: 11px; }
 .map-gradient { width: 120px; height: 8px; background: linear-gradient(90deg, color-mix(in srgb, var(--forest-2) 14%, var(--paper)), var(--forest-2)); }
 .map-footer #map-status { margin-left: auto; }

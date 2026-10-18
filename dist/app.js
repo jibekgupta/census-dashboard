@@ -65,6 +65,9 @@ const state = {
   comparePlaces: [{ state: "24", county: "" }, { state: "51", county: "" }, { state: "06", county: "" }],
   compareRecords: new Map(),
   mapRecords: [],
+  mapGeometry: null,
+  mapPath: null,
+  mapGeometryFailed: false,
   customRows: [],
   mode: "loading",
   apiKey: readSessionKey(),
@@ -269,6 +272,7 @@ async function loadMapData() {
       const url = buildCensusUrl({ year: state.year, geography: "state", state: "*", variables: VARIABLES, apiKey: state.apiKey });
       state.mapRecords = parseCensusResponse(await fetchJson(url));
       elements.mapStatus.textContent = `Live ${state.year} ACS data`;
+      await ensureMapGeometry();
       renderMap();
       return;
     } catch (error) {
@@ -286,10 +290,16 @@ async function loadMapData() {
     };
   });
   elements.mapStatus.textContent = "Illustrative demo pattern · Add API key for live values";
+  await ensureMapGeometry();
   renderMap();
 }
 
 function renderMap() {
+  if (!state.mapGeometry && !state.mapGeometryFailed) {
+    elements.map.className = "geo-map map-loading";
+    elements.map.textContent = "Loading geographic boundaries…";
+    return;
+  }
   const metricKey = elements.mapMetric.value;
   const meta = METRIC_META[metricKey];
   const rows = state.mapRecords.map((record) => ({
@@ -298,6 +308,34 @@ function renderMap() {
   })).filter((item) => item.stateInfo && STATE_TILES[item.stateInfo.abbreviation]);
   const values = rows.map((item) => item.value).filter(Number.isFinite);
   const min = Math.min(...values), max = Math.max(...values);
+  if (!state.mapGeometry) {
+    renderTileMap(rows, min, max, meta);
+    return;
+  }
+  const rowByFips = new Map(rows.map((item) => [item.record.state, item]));
+  elements.map.className = "geo-map";
+  elements.map.innerHTML = `<svg viewBox="0 0 975 610" role="img" aria-labelledby="map-title map-description">
+    <title id="map-title">United States ${meta.label} map</title>
+    <desc id="map-description">State boundaries colored from lower to higher ${meta.label.toLowerCase()}. Select a state to open its profile.</desc>
+    ${state.mapGeometry.map((feature) => {
+      const fips = String(feature.id).padStart(2, "0");
+      const item = rowByFips.get(fips);
+      const value = item?.value;
+      const stateInfo = item?.stateInfo || STATES.find((candidate) => candidate.fips === fips);
+      if (!stateInfo) return "";
+      const shade = Number.isFinite(value) ? Math.round(((value - min) / (max - min || 1)) * 100) : 0;
+      const label = `${stateInfo.name}: ${formatMetric(value, meta.unit)}`;
+      const path = state.mapPath(feature);
+      if (!path) return "";
+      return `<path class="geo-state ${Number.isFinite(value) ? "" : "no-data"} ${fips === state.fips ? "selected" : ""}" d="${path}" style="--shade:${14 + shade * .72}%" data-map-state="${fips}" tabindex="0" role="button" aria-label="${label}"><title>${label}</title></path>`;
+    }).join("")}
+  </svg>`;
+  $("#map-low").textContent = Number.isFinite(min) ? formatMetric(min, meta.unit) : "Lower";
+  $("#map-high").textContent = Number.isFinite(max) ? formatMetric(max, meta.unit) : "Higher";
+}
+
+function renderTileMap(rows, min, max, meta) {
+  elements.map.className = "state-map";
   elements.map.innerHTML = rows.map(({ record, value, stateInfo }) => {
     const [column, row] = STATE_TILES[stateInfo.abbreviation];
     const shade = Number.isFinite(value) ? Math.round(((value - min) / (max - min || 1)) * 100) : 0;
@@ -306,6 +344,29 @@ function renderMap() {
   }).join("");
   $("#map-low").textContent = Number.isFinite(min) ? formatMetric(min, meta.unit) : "Lower";
   $("#map-high").textContent = Number.isFinite(max) ? formatMetric(max, meta.unit) : "Higher";
+}
+
+async function ensureMapGeometry() {
+  if (state.mapGeometry || state.mapGeometryFailed) return;
+  elements.map.className = "geo-map map-loading";
+  elements.map.textContent = "Loading geographic boundaries…";
+  try {
+    const [{ feature }, d3Geo, response] = await Promise.all([
+      import("https://cdn.jsdelivr.net/npm/topojson-client@3/+esm"),
+      import("https://cdn.jsdelivr.net/npm/d3-geo@3/+esm"),
+      fetch("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json"),
+    ]);
+    if (!response.ok) throw new Error(`Boundary request failed (${response.status})`);
+    const topology = await response.json();
+    const collection = feature(topology, topology.objects.states);
+    const projection = d3Geo.geoAlbersUsa().fitExtent([[20, 20], [955, 590]], collection);
+    state.mapGeometry = collection.features;
+    state.mapPath = d3Geo.geoPath(projection);
+  } catch (error) {
+    state.mapGeometryFailed = true;
+    elements.mapStatus.textContent = `${elements.mapStatus.textContent} · Tile fallback`;
+    console.warn("Geographic boundaries unavailable; using tile fallback.", error);
+  }
 }
 
 function syncUrl() {
@@ -507,6 +568,12 @@ function bindEvents() {
     else elements.county.innerHTML = '<option value="">Entire state</option>';
     await loadProfile();
     scrollTo({ top: Math.max(0, $(".status-bar").offsetTop - 90), behavior: "smooth" });
+  });
+  elements.map.addEventListener("keydown", (event) => {
+    if ((event.key === "Enter" || event.key === " ") && event.target.dataset.mapState) {
+      event.preventDefault();
+      event.target.click();
+    }
   });
   elements.compareLevel.addEventListener("change", loadCompareCounties);
   elements.compareSelect.addEventListener("change", loadCompareCounties);

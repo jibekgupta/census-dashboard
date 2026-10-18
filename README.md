@@ -9,7 +9,7 @@ unavailable or requires a key.
 ## Features
 
 - State and county profiles with URL-shareable filters
-- Interactive state tile map with selectable population, income, poverty, and homeownership layers
+- Interactive geographic state choropleth with selectable population, income, poverty, and homeownership layers
 - Eight headline indicators with margins of error
 - Six-year trends for population and median household income
 - Demographic, housing, education, employment, and poverty breakdowns
@@ -45,6 +45,12 @@ Values shown as rates are calculated from published numerator and denominator
 estimates and may differ slightly from Census profile-table values due to
 rounding. ACS estimates are not a population census and should not be treated
 as exact counts.
+
+The geographic choropleth loads Census-derived `us-atlas` state geometry and
+the open-source `topojson-client` decoder from jsDelivr. These assets provide
+only public boundaries; Census values still come directly from
+`api.census.gov`. If the geometry assets cannot load, the accessible tile-map
+fallback remains available.
 
 The Census Bureau may require an API key for production requests. This static
 release never embeds a shared secret in browser code. Visitors can provide their

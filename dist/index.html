@@ -115,7 +115,7 @@
 
       <article class="panel map-panel">
         <div class="panel-heading map-heading">
-          <div><span class="kicker">Geographic pattern</span><h3>State tile map</h3><p>Color shows the selected metric across states. Select a tile to open its profile.</p></div>
+          <div><span class="kicker">Geographic pattern</span><h3>U.S. state map</h3><p>Color shows the selected metric across real state boundaries. Select a state to open its profile.</p></div>
           <select id="map-metric-select" aria-label="Map metric">
             <option value="population">Population</option>
             <option value="income">Median household income</option>
@@ -123,7 +123,7 @@
             <option value="homeownership">Homeownership</option>
           </select>
         </div>
-        <div id="state-map" class="state-map" aria-label="United States state tile map"></div>
+        <div id="state-map" class="geo-map" aria-label="United States state choropleth map"></div>
         <div class="map-footer"><span id="map-low">Lower</span><span class="map-gradient" aria-hidden="true"></span><span id="map-high">Higher</span><span id="map-status">Add an API key for live state values</span></div>
       </article>
     </section>
@@ -168,7 +168,7 @@
     <section id="methodology-section" class="dashboard-section methodology" hidden>
       <div class="section-heading"><div><span class="kicker">Read the data well</span><h2>Methodology &amp; sources</h2></div></div>
       <div class="method-grid">
-        <article><span>01</span><h3>Source</h3><p>All live figures come from the U.S. Census Bureau American Community Survey 5-year Detailed Tables API. The selected year is the end year of the five-year estimate period.</p></article>
+        <article><span>01</span><h3>Source</h3><p>Live figures come from the U.S. Census Bureau ACS 5-year Detailed Tables API. Geographic boundaries use Census-derived cartographic data distributed by the open-source us-atlas project.</p></article>
         <article><span>02</span><h3>Uncertainty</h3><p>ACS data are survey estimates. We show published 90% margins of error for headline measures when available. Calculated rates should be interpreted with appropriate caution.</p></article>
         <article><span>03</span><h3>Availability</h3><p>ACS 5-year coverage supports every state and county. During an API interruption, the dashboard clearly labels and displays a small demo dataset instead of failing silently.</p></article>
         <article><span>04</span><h3>Privacy</h3><p>No account, analytics, cookies, or personal information. Filters are reflected in the URL for sharing. A user-supplied Census key stays only in the current tab and is sent directly to api.census.gov.</p></article>
