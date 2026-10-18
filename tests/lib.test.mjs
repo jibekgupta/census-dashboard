@@ -75,6 +75,7 @@ test("computeMetrics derives topic rates used by the atlas", () => {
     B11001_001E: 400, B11001_002E: 260,
     B08201_001E: 400, B08201_002E: 40,
     B08301_001E: 500, B08301_010E: 50, B08301_021E: 75,
+    B27010_001E: 1000, B27010_017E: 20, B27010_033E: 30, B27010_050E: 40, B27010_066E: 10,
   });
   assert.equal(values.white.value, 40);
   assert.equal(values.hispanic.value, 20);
@@ -84,6 +85,7 @@ test("computeMetrics derives topic rates used by the atlas", () => {
   assert.equal(values.noVehicle.value, 10);
   assert.equal(values.transit.value, 10);
   assert.equal(values.workFromHome.value, 15);
+  assert.equal(values.uninsured.value, 10);
 });
 
 test("formatMetric formats compact values, currency, and percentages", () => {

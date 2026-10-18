@@ -59,6 +59,7 @@ const TOPICS = [
   { icon: "◎", title: "Families & households", description: "Family households and average household size.", metrics: ["familyHouseholds", "householdSize"] },
   { icon: "A", title: "Language & birthplace", description: "Languages spoken at home and residents born outside the United States.", metrics: ["nonEnglish", "foreignBorn"] },
   { icon: "→", title: "Transportation", description: "Public-transit commuting and households without a vehicle.", metrics: ["transit", "noVehicle", "workFromHome"] },
+  { icon: "+", title: "Health coverage", description: "The share of residents without health insurance coverage.", metrics: ["uninsured"] },
 ];
 
 function readSessionKey() {

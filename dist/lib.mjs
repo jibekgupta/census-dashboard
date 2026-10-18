@@ -32,6 +32,7 @@ export const VARIABLES = [
   "B05002_001E", "B05002_013E", "B16001_001E", "B16001_002E",
   "B11001_001E", "B11001_002E", "B25010_001E", "B25064_001E",
   "B08201_001E", "B08201_002E", "B08301_001E", "B08301_010E", "B08301_021E",
+  "B27010_001E", "B27010_017E", "B27010_033E", "B27010_050E", "B27010_066E",
 ];
 
 export const METRIC_META = {
@@ -55,6 +56,7 @@ export const METRIC_META = {
   noVehicle: { label: "Households without a vehicle", unit: "percent", source: "B08201" },
   transit: { label: "Commute by public transit", unit: "percent", source: "B08301" },
   workFromHome: { label: "Work from home", unit: "percent", source: "B08301" },
+  uninsured: { label: "Population without health insurance", unit: "percent", source: "B27010" },
 };
 
 export function buildCensusUrl({ year, geography, state, county, variables = VARIABLES, apiKey = "" }) {
@@ -118,6 +120,7 @@ export function computeMetrics(record) {
     noVehicle: { value: safeRate(record.B08201_002E, record.B08201_001E), moe: null },
     transit: { value: safeRate(record.B08301_010E, record.B08301_001E), moe: null },
     workFromHome: { value: safeRate(record.B08301_021E, record.B08301_001E), moe: null },
+    uninsured: { value: safeRate(sum(record, ["B27010_017E", "B27010_033E", "B27010_050E", "B27010_066E"]), record.B27010_001E), moe: null },
   };
 }
 
@@ -179,6 +182,7 @@ export const DEMO_RECORD = {
   B11001_001E: 2350000, B11001_002E: 1510000, B25010_001E: 2.62, B25064_001E: 1785,
   B08201_001E: 2350000, B08201_002E: 210000, B08301_001E: 2940000, B08301_010E: 238000,
   B08301_021E: 420000,
+  B27010_001E: 6177224, B27010_017E: 52000, B27010_033E: 116000, B27010_050E: 162000, B27010_066E: 11000,
 };
 
 export const DEMO_TRENDS = [

@@ -10,8 +10,8 @@ unavailable or requires a key.
 
 - State and county profiles with URL-shareable filters
 - Search across states, loaded counties, measures, and Census table identifiers
-- Topic catalog covering population, race and ethnicity, income, housing, education, employment, families, language, birthplace, and transportation
-- State and county map explorer with 20 measures, year controls, hover values, distributions, and highest/lowest rankings
+- Topic catalog covering population, race and ethnicity, income, housing, education, employment, families, language, birthplace, transportation, and health coverage
+- State and county map explorer with 21 measures, year controls, hover values, distributions, and highest/lowest rankings
 - Eight headline indicators with margins of error
 - State or national benchmark context for every place profile
 - Six-year trends for population and median household income
