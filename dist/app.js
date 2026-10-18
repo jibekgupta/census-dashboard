@@ -261,14 +261,14 @@ function renderCommunityProfile(metrics) {
 
 function renderInsight(metrics) {
   const place = state.record.NAME.split(",")[0];
-  const descriptors = [];
-  if (metrics.income.value > 90000) descriptors.push("household income is comparatively high");
-  else if (metrics.income.value < 60000) descriptors.push("household income remains an economic pressure point");
-  if (metrics.bachelors.value > 40) descriptors.push("educational attainment stands out");
-  if (metrics.homeownership.value > 65) descriptors.push("homeownership is a defining part of the housing picture");
-  if (metrics.poverty.value > 15) descriptors.push("poverty affects a meaningful share of residents");
-  const sentence = descriptors.length ? descriptors.slice(0, 2).join(", while ") : "its social and economic indicators sit near the broad middle of the national landscape";
-  elements.insight.textContent = `In ${place}, ${sentence}. These estimates describe a community in motion—not a final verdict on it.`;
+  const facts = [
+    Number.isFinite(metrics.income.value) ? `median household income is ${formatMetric(metrics.income.value, "currency")}` : "",
+    Number.isFinite(metrics.homeownership.value) ? `${formatMetric(metrics.homeownership.value, "percent")} of occupied homes are owner-occupied` : "",
+    Number.isFinite(metrics.poverty.value) ? `${formatMetric(metrics.poverty.value, "percent")} of residents are below the poverty line` : "",
+  ].filter(Boolean);
+  elements.insight.textContent = facts.length
+    ? `${place}: ${facts.slice(0, 2).join("; ")}.`
+    : `${place}: no summary measures are available for this selection.`;
 }
 
 async function loadMapData() {
@@ -332,9 +332,9 @@ function renderMap() {
       const label = `${stateInfo.name}: ${formatMetric(value, meta.unit)}`;
       const path = state.mapPath(feature);
       if (!path) return "";
-      return `<path class="geo-state ${Number.isFinite(value) ? "" : "no-data"} ${fips === state.fips ? "selected" : ""}" d="${path}" style="--shade:${14 + shade * .72}%" data-map-state="${fips}" tabindex="0" role="button" aria-label="${label}"><title>${label}</title></path>`;
+      return `<path class="geo-state ${Number.isFinite(value) ? "" : "no-data"} ${fips === state.fips ? "selected" : ""}" d="${path}" style="--shade:${14 + shade * .72}%" data-map-state="${fips}" tabindex="0" role="button" aria-label="${label}"></path>`;
     }).join("")}
-  </svg>`;
+  </svg><div class="map-tooltip" role="tooltip" hidden></div>`;
   $("#map-low").textContent = Number.isFinite(min) ? formatMetric(min, meta.unit) : "Lower";
   $("#map-high").textContent = Number.isFinite(max) ? formatMetric(max, meta.unit) : "Higher";
 }
@@ -345,8 +345,8 @@ function renderTileMap(rows, min, max, meta) {
     const [column, row] = STATE_TILES[stateInfo.abbreviation];
     const shade = Number.isFinite(value) ? Math.round(((value - min) / (max - min || 1)) * 100) : 0;
     const label = `${stateInfo.name}: ${formatMetric(value, meta.unit)}`;
-    return `<button class="state-tile ${Number.isFinite(value) ? "" : "no-data"} ${record.state === state.fips ? "selected" : ""}" style="grid-column:${column};grid-row:${row};--shade:${14 + shade * .72}%" data-map-state="${record.state}" aria-label="${label}" title="${label}">${stateInfo.abbreviation}</button>`;
-  }).join("");
+    return `<button class="state-tile ${Number.isFinite(value) ? "" : "no-data"} ${record.state === state.fips ? "selected" : ""}" style="grid-column:${column};grid-row:${row};--shade:${14 + shade * .72}%" data-map-state="${record.state}" aria-label="${label}">${stateInfo.abbreviation}</button>`;
+  }).join("") + '<div class="map-tooltip" role="tooltip" hidden></div>';
   $("#map-low").textContent = Number.isFinite(min) ? formatMetric(min, meta.unit) : "Lower";
   $("#map-high").textContent = Number.isFinite(max) ? formatMetric(max, meta.unit) : "Higher";
 }
@@ -538,6 +538,26 @@ function toast(message) {
   toastTimer = setTimeout(() => elements.toast.classList.remove("show"), 2200);
 }
 
+function showMapTooltip(target, clientX, clientY) {
+  const tooltip = elements.map.querySelector(".map-tooltip");
+  if (!tooltip || !target) return;
+  tooltip.textContent = target.getAttribute("aria-label") || "";
+  tooltip.hidden = false;
+  const mapBounds = elements.map.getBoundingClientRect();
+  const targetBounds = target.getBoundingClientRect();
+  const anchorX = Number.isFinite(clientX) ? clientX - mapBounds.left : targetBounds.left - mapBounds.left + targetBounds.width / 2;
+  const anchorY = Number.isFinite(clientY) ? clientY - mapBounds.top : targetBounds.top - mapBounds.top;
+  const left = Math.min(Math.max(8, anchorX + 12), Math.max(8, mapBounds.width - tooltip.offsetWidth - 8));
+  const top = Math.min(Math.max(8, anchorY - tooltip.offsetHeight - 12), Math.max(8, mapBounds.height - tooltip.offsetHeight - 8));
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${top}px`;
+}
+
+function hideMapTooltip() {
+  const tooltip = elements.map.querySelector(".map-tooltip");
+  if (tooltip) tooltip.hidden = true;
+}
+
 function bindEvents() {
   elements.state.addEventListener("change", async () => {
     state.fips = elements.state.value; state.county = "";
@@ -581,6 +601,22 @@ function bindEvents() {
       event.target.click();
     }
   });
+  elements.map.addEventListener("pointerover", (event) => {
+    const target = event.target.closest?.("[data-map-state]");
+    if (target) showMapTooltip(target, event.clientX, event.clientY);
+  });
+  elements.map.addEventListener("pointermove", (event) => {
+    const target = event.target.closest?.("[data-map-state]");
+    if (target) showMapTooltip(target, event.clientX, event.clientY);
+  });
+  elements.map.addEventListener("pointerout", (event) => {
+    if (event.target.closest?.("[data-map-state]")) hideMapTooltip();
+  });
+  elements.map.addEventListener("focusin", (event) => {
+    const target = event.target.closest?.("[data-map-state]");
+    if (target) showMapTooltip(target);
+  });
+  elements.map.addEventListener("focusout", hideMapTooltip);
   elements.compareLevel.addEventListener("change", loadCompareCounties);
   elements.compareSelect.addEventListener("change", loadCompareCounties);
   elements.compareYear.addEventListener("change", () => {

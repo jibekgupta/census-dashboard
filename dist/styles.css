@@ -178,17 +178,19 @@ blockquote { margin: 2rem 0; font-family: "Newsreader", Georgia, serif; font-sty
 .map-panel { margin-top: 22px; box-shadow: none; }
 .map-heading p { color: var(--muted); margin: .45rem 0 0; }
 .map-heading select, .compare-toolbar select { appearance: none; border: 1px solid var(--line); background: var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23828c84'/%3E%3C/svg%3E") no-repeat calc(100% - 12px) center; color: var(--ink); padding: .65rem 2.2rem .65rem .8rem; }
-.state-map { margin: 2.2rem auto 1.4rem; width: min(100%, 900px); display: grid; grid-template-columns: repeat(13, minmax(38px, 1fr)); grid-template-rows: repeat(8, minmax(38px, 1fr)); gap: 5px; }
+.state-map { position: relative; margin: 2.2rem auto 1.4rem; width: min(100%, 900px); display: grid; grid-template-columns: repeat(13, minmax(38px, 1fr)); grid-template-rows: repeat(8, minmax(38px, 1fr)); gap: 5px; }
 .state-tile { aspect-ratio: 1; border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent); background: color-mix(in srgb, var(--forest-2) var(--shade), var(--paper)); color: var(--ink); display: grid; place-items: center; cursor: pointer; font-size: clamp(9px, 1.2vw, 12px); font-weight: 700; transition: transform .15s, border-color .15s; }
 .state-tile:hover, .state-tile:focus-visible { transform: translateY(-2px); border-color: var(--orange); z-index: 2; }
 .state-tile.selected { outline: 3px solid var(--orange); outline-offset: 1px; }
 .state-tile.no-data { background: var(--paper-2); color: var(--muted); }
-.geo-map { width: min(100%, 980px); min-height: 320px; margin: 1.5rem auto 1rem; }
+.geo-map { position: relative; width: min(100%, 980px); min-height: 320px; margin: 1.5rem auto 1rem; }
 .geo-map svg { display: block; width: 100%; height: auto; overflow: visible; }
 .geo-state { fill: color-mix(in srgb, var(--forest-2) var(--shade), var(--paper)); stroke: var(--paper); stroke-width: 1.2; vector-effect: non-scaling-stroke; cursor: pointer; transition: fill .15s, stroke .15s, filter .15s; }
 .geo-state:hover, .geo-state:focus { stroke: var(--orange); stroke-width: 3; filter: brightness(1.08); outline: none; }
 .geo-state.selected { stroke: var(--orange); stroke-width: 4; }
 .geo-state.no-data { fill: var(--paper-2); }
+.map-tooltip { position: absolute; z-index: 5; pointer-events: none; padding: .55rem .7rem; border: 1px solid var(--line); background: var(--ink); color: var(--paper); box-shadow: var(--shadow); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.map-tooltip[hidden] { display: none; }
 .map-loading { min-height: 320px; display: grid; place-items: center; color: var(--muted); }
 .map-footer { display: flex; align-items: center; gap: .6rem; color: var(--muted); font-size: 11px; }
 .map-gradient { width: 120px; height: 8px; background: linear-gradient(90deg, color-mix(in srgb, var(--forest-2) 14%, var(--paper)), var(--forest-2)); }

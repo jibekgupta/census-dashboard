@@ -35,11 +35,11 @@
       <div class="hero-grid">
         <div>
           <h1>Understand a place.<br><em>See the pattern.</em></h1>
-          <p>Explore the people, economies, and homes shaping every U.S. state and county—grounded in the latest American Community Survey.</p>
+          <p>Explore population, housing, and economic measures for every U.S. state and county using American Community Survey data.</p>
         </div>
         <div class="hero-note">
           <span class="note-number">01</span>
-          <p>Reliable public data,<br>made legible.</p>
+          <p>Official ACS data,<br>in plain view.</p>
         </div>
       </div>
     </section>
@@ -96,7 +96,7 @@
 
         <article class="panel insight-panel">
           <span class="kicker">At a glance</span>
-          <blockquote id="insight-text">Loading a plain-language summary of this place…</blockquote>
+          <blockquote id="insight-text">Loading summary…</blockquote>
           <div class="insight-rule"></div>
           <p class="fine-print">Comparisons use ACS 5-year estimates. Differences may fall within margins of error.</p>
         </article>
@@ -115,7 +115,7 @@
 
       <article class="panel map-panel">
         <div class="panel-heading map-heading">
-          <div><span class="kicker">Geographic pattern</span><h3>U.S. state map</h3><p>Color shows the selected metric across real state boundaries. Select a state to open its profile.</p></div>
+          <div><span class="kicker">Geographic pattern</span><h3>U.S. state map</h3><p>Hover over a state to see its value. Select it to open the full profile.</p></div>
           <select id="map-metric-select" aria-label="Map metric">
             <option value="population">Population</option>
             <option value="income">Median household income</option>
@@ -131,7 +131,7 @@
     <section id="compare-section" class="dashboard-section" hidden>
       <div class="section-heading">
         <div><span class="kicker">Side by side</span><h2>Compare places</h2></div>
-        <p>Choose up to four states or counties and compare the same ACS indicators.</p>
+        <p>Compare up to four states or counties using the same ACS measures.</p>
       </div>
       <div class="compare-toolbar">
         <label class="compare-control" for="compare-year-select"><span>Year</span><select id="compare-year-select" aria-label="Comparison year"></select></label>
@@ -149,7 +149,7 @@
     <section id="explorer-section" class="dashboard-section" hidden>
       <div class="section-heading">
         <div><span class="kicker">Build your own query</span><h2>Data Explorer</h2></div>
-        <p>Enter up to 20 ACS detailed-table variable codes and retrieve them for the place selected above.</p>
+        <p>Enter up to 20 ACS detailed-table variables for the selected place.</p>
       </div>
       <div class="explorer-grid">
         <article class="panel query-panel">
@@ -169,10 +169,10 @@
     <section id="methodology-section" class="dashboard-section methodology" hidden>
       <div class="section-heading"><div><span class="kicker">Read the data well</span><h2>Methodology &amp; sources</h2></div></div>
       <div class="method-grid">
-        <article><span>01</span><h3>Source</h3><p>Live figures come from the U.S. Census Bureau ACS 5-year Detailed Tables API. Geographic boundaries use Census-derived cartographic data distributed by the open-source us-atlas project.</p></article>
-        <article><span>02</span><h3>Uncertainty</h3><p>ACS data are survey estimates. We show published 90% margins of error for headline measures when available. Calculated rates should be interpreted with appropriate caution.</p></article>
-        <article><span>03</span><h3>Availability</h3><p>ACS 5-year coverage supports every state and county. During an API interruption, the dashboard clearly labels and displays a small demo dataset instead of failing silently.</p></article>
-        <article><span>04</span><h3>Privacy</h3><p>No account, analytics, cookies, or personal information. Filters are reflected in the URL for sharing. A user-supplied Census key stays only in the current tab and is sent directly to api.census.gov.</p></article>
+        <article><span>01</span><h3>Source</h3><p>Figures come from the U.S. Census Bureau ACS 5-year Detailed Tables API. State boundaries come from Census cartographic data distributed by the open-source us-atlas project.</p></article>
+        <article><span>02</span><h3>Uncertainty</h3><p>ACS figures are survey estimates. Published 90% margins of error appear with headline measures when available. Calculated rates do not include margins of error.</p></article>
+        <article><span>03</span><h3>Availability</h3><p>ACS 5-year data cover every state and county. If the API is unavailable, the dashboard switches to a clearly labeled demo dataset.</p></article>
+        <article><span>04</span><h3>Privacy</h3><p>The dashboard uses no accounts or analytics. A Census API key stays in the current browser tab and is sent only to api.census.gov.</p></article>
       </div>
       <a class="source-link" href="https://www.census.gov/programs-surveys/acs/guidance/estimates.html" target="_blank" rel="noreferrer">Read the Census Bureau’s ACS guidance <span>↗</span></a>
     </section>
@@ -181,13 +181,13 @@
   <footer>
     <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>Census <strong>Atlas</strong></span></div>
     <p>Built with public data. Not affiliated with the U.S. Census Bureau.</p>
-    <p>Data updates on request.</p>
+    <p>Data refreshes when you choose a place.</p>
   </footer>
 
   <dialog id="export-dialog">
     <form method="dialog">
       <div class="dialog-heading"><div><span class="kicker">Take it with you</span><h2>Export this profile</h2></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div>
-      <p>Download the visible estimates and metadata. Exports include Census variable identifiers for reproducibility.</p>
+      <p>Download the visible estimates and their Census variable identifiers.</p>
       <div class="export-actions">
         <button type="button" class="primary-button" data-export="csv">Download CSV</button>
         <button type="button" class="outline-button" data-export="json">Download JSON</button>
@@ -197,7 +197,7 @@
   <dialog id="api-key-dialog">
     <form id="api-key-form">
       <div class="dialog-heading"><div><span class="kicker">Unlock live data</span><h2>Use your Census API key</h2></div><button class="icon-button" type="button" data-close-key aria-label="Close">×</button></div>
-      <p>Your key is sent only to <strong>api.census.gov</strong> and kept in this browser tab until you close it. It is never saved with the dashboard, added to the page URL, or included in exports.</p>
+      <p>Your key is sent only to <strong>api.census.gov</strong> and stays in this tab until you close it. It is not saved, added to the URL, or included in exports.</p>
       <label class="input-label" for="api-key-input">Census API key</label>
       <div class="key-input-row">
         <input id="api-key-input" name="api-key" type="password" autocomplete="off" spellcheck="false" required placeholder="Paste your API key">
