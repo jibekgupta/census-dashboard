@@ -68,8 +68,7 @@ proxy and keep `CENSUS_API_KEY` in that host's secret manager.
 ## Deployment
 
 The production artifact is the `dist/` directory. It can be hosted on any
-static host. This repository also contains `.openai/hosting.json` for OpenAI
-Sites deployment.
+static host.
 
 ### GitHub Pages
 
