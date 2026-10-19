@@ -71,6 +71,14 @@ The production artifact is the `dist/` directory. It can be hosted on any
 static host. This repository also contains `.openai/hosting.json` for OpenAI
 Sites deployment.
 
+### GitHub Pages
+
+The included `pages.yml` workflow publishes `dist/` whenever `main` is pushed.
+In the repository's **Settings → Pages** screen, set the deployment source to
+**GitHub Actions**. The public project URL will be:
+
+<https://jibekgupta.github.io/census-dashboard/>
+
 ## Privacy
 
 The app has no accounts, cookies, analytics, or server-side storage. Filter and
