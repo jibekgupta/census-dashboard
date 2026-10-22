@@ -14,5 +14,7 @@ file. Do not include Census API keys, tokens, or personal information.
 
 Census Atlas does not collect user data. It stores only a color-theme preference
 in local browser storage. Geography filters are encoded in the URL for sharing.
-Production API keys must never be added to `dist/`, committed to Git, or sent to
-the browser.
+User-supplied Census API keys stay only in page memory and are sent directly to
+the Census Bureau for API requests. They are never stored by Census Atlas and
+are cleared when the page closes or reloads. Shared production API keys must
+never be added to `dist/`, committed to Git, or sent to the browser.

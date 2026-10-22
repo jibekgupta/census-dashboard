@@ -62,18 +62,6 @@ const TOPICS = [
   { icon: "+", title: "Health coverage", description: "The share of residents without health insurance coverage.", metrics: ["uninsured"] },
 ];
 
-function readSessionKey() {
-  try { return sessionStorage.getItem("census-api-key") || ""; }
-  catch { return ""; }
-}
-
-function writeSessionKey(value) {
-  try {
-    if (value) sessionStorage.setItem("census-api-key", value);
-    else sessionStorage.removeItem("census-api-key");
-  } catch { /* The dashboard still works in demo mode when storage is blocked. */ }
-}
-
 const params = new URLSearchParams(location.search);
 const state = {
   fips: STATES.some((item) => item.fips === params.get("state")) ? params.get("state") : "24",
@@ -96,7 +84,7 @@ const state = {
   mapRequestId: 0,
   customRows: [],
   mode: "loading",
-  apiKey: readSessionKey(),
+  apiKey: "",
 };
 
 function initOptions() {
@@ -587,7 +575,8 @@ function switchSection(section) {
   });
   if (section === "compare") loadComparisons();
   if (section === "map") loadMapData();
-  scrollTo({ top: Math.max(0, $(".status-bar").offsetTop - 90), behavior: "smooth" });
+  const scrollTarget = section === "about" ? $("#about-section") : $(".status-bar");
+  scrollTo({ top: Math.max(0, scrollTarget.offsetTop - 90), behavior: "smooth" });
 }
 
 async function loadComparisons() {
@@ -907,11 +896,11 @@ function bindEvents() {
     const apiKey = elements.apiKeyInput.value.trim();
     if (!apiKey) return;
     state.apiKey = apiKey;
-    writeSessionKey(apiKey);
+    elements.apiKeyInput.value = "";
     state.compareRecords.clear();
     elements.apiKeyButton.textContent = "Manage API key";
     elements.apiKeyDialog.close();
-    toast("API key saved for this tab");
+    toast("API key kept in memory while this page is open");
     await loadCounties();
     await loadCompareCounties();
     await loadProfile();
@@ -919,7 +908,6 @@ function bindEvents() {
   });
   elements.forgetKey.addEventListener("click", async () => {
     state.apiKey = "";
-    writeSessionKey("");
     state.compareRecords.clear();
     elements.apiKeyInput.value = "";
     elements.apiKeyButton.textContent = "Add API key";
@@ -932,6 +920,7 @@ function bindEvents() {
 }
 
 async function init() {
+  try { sessionStorage.removeItem("census-api-key"); } catch { /* Storage may be unavailable. */ }
   const storedTheme = localStorage.getItem("census-atlas-theme");
   if (storedTheme) document.documentElement.dataset.theme = storedTheme;
   else if (matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.dataset.theme = "dark";

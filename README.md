@@ -58,8 +58,8 @@ fallback remains available.
 
 The Census Bureau may require an API key for production requests. This static
 release never embeds a shared secret in browser code. Visitors can provide their
-own Census API key; it is held only in `sessionStorage`, sent directly to
-`api.census.gov`, and removed when the tab closes. It is not placed in the page
+own Census API key; it is held only in page memory, sent directly to
+`api.census.gov`, and removed when the page closes or reloads. It is not placed in the page
 URL, analytics, exports, or source control. If no key is present or a request is
 rejected, the status bar changes to orange and every fallback place name is
 marked “demo profile.” A shared-key deployment should instead use a server-side
@@ -80,9 +80,12 @@ In the repository's **Settings → Pages** screen, set the deployment source to
 
 ## Privacy
 
-The app has no accounts, cookies, analytics, or server-side storage. Filter and
-theme preferences stay in the browser. Requests go directly from the browser
-to `api.census.gov`.
+The app has no accounts, cookies, analytics, or server-side storage. A Census
+API key is never stored by Census Atlas; it remains in page memory until the
+page closes or reloads. The color-theme preference is saved in local browser
+storage, and geography filters can be included in a shareable URL. Census
+requests, including a supplied key, go directly from the browser to
+`api.census.gov` over HTTPS.
 
 ## License
 
