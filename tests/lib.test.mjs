@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildCensusUrl,
   computeMetrics,
+  escapeHtml,
   formatMetric,
   normalizeVariableCodes,
   parseCensusResponse,
@@ -99,6 +100,16 @@ test("formatMetric formats compact values, currency, and percentages", () => {
 test("toCsv quotes commas and escapes quotes", () => {
   const csv = toCsv([{ place: "Austin, Texas", note: "A \"test\"", value: 3 }]);
   assert.equal(csv, 'place,note,value\r\n"Austin, Texas","A ""test""",3');
+});
+
+test("escapeHtml renders Census labels as text in HTML and quoted attributes", () => {
+  assert.equal(escapeHtml('<img src=x onerror="alert(1)"> & O\'Brien'),
+    '&lt;img src=x onerror=&quot;alert(1)&quot;&gt; &amp; O&#39;Brien');
+});
+
+test("toCsv prevents text values from becoming spreadsheet formulas", () => {
+  assert.equal(toCsv([{ place: "=HYPERLINK(\"https://example.com\")", value: -3 }]),
+    'place,value\r\n"\'=HYPERLINK(""https://example.com"")",-3');
 });
 
 test("normalizeVariableCodes accepts comma or whitespace separated Census variables", () => {

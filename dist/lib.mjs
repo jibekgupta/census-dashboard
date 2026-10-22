@@ -1,5 +1,11 @@
 export const CENSUS_BASE = "https://api.census.gov/data";
 
+export function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character]);
+}
+
 export const STATES = [
   ["01", "Alabama", "AL"], ["02", "Alaska", "AK"], ["04", "Arizona", "AZ"],
   ["05", "Arkansas", "AR"], ["06", "California", "CA"], ["08", "Colorado", "CO"],
@@ -162,7 +168,8 @@ export function toCsv(rows) {
   const headers = Object.keys(rows[0]);
   const escape = (value) => {
     const string = value == null ? "" : String(value);
-    return /[",\r\n]/.test(string) ? `"${string.replaceAll('"', '""')}"` : string;
+    const safe = typeof value === "string" && /^[\s\uFEFF]*[=+\-@\uFF1D\uFF0B\uFF0D\uFF20]/.test(string) ? `'${string}` : string;
+    return /[",\r\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
   };
   return [headers.join(","), ...rows.map((row) => headers.map((header) => escape(row[header])).join(","))].join("\r\n");
 }

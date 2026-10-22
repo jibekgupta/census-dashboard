@@ -38,7 +38,7 @@ npm run check
 ```
 
 The suite covers Census response parsing, calculations, formatting, query
-construction, CSV export, and fallback behavior.
+construction, CSV export, and output escaping.
 
 ## Data and methodology
 
@@ -50,25 +50,26 @@ rounding. ACS estimates are not a population census and should not be treated
 as exact counts. Adjacent ACS 5-year releases overlap by four survey years, so
 the app presents them as a recent trend rather than independent periods.
 
-The geographic choropleth loads Census-derived `us-atlas` state and county geometry and
-the open-source `topojson-client` decoder from jsDelivr. These assets provide
-only public boundaries; Census values still come directly from
-`api.census.gov`. If the geometry assets cannot load, the accessible tile-map
-fallback remains available.
+The geographic choropleth uses Census-derived `us-atlas` state and county
+geometry and locally bundled map code. Fonts and map assets are served with the
+site; Census values still come directly from `api.census.gov`. If the geometry
+assets cannot load, the accessible tile-map fallback remains available.
 
 The Census Bureau may require an API key for production requests. This static
 release never embeds a shared secret in browser code. Visitors can provide their
 own Census API key; it is held only in page memory, sent directly to
-`api.census.gov`, and removed when the page closes or reloads. It is not placed in the page
-URL, analytics, exports, or source control. If no key is present or a request is
+`api.census.gov` as a query parameter, and removed when the page closes or
+reloads. The Census Bureau may log those requests. The key is not placed in the
+page URL, analytics, exports, or source control. If no key is present or a request is
 rejected, the status bar changes to orange and every fallback place name is
 marked “demo profile.” A shared-key deployment should instead use a server-side
 proxy and keep `CENSUS_API_KEY` in that host's secret manager.
 
 ## Deployment
 
-The production artifact is the `dist/` directory. It can be hosted on any
-static host.
+The production artifact is the `dist/` directory. Run `npm ci && npm run check`
+before deploying; this builds the local map and font assets and runs tests. The
+site can be hosted on any static host.
 
 ### GitHub Pages
 
@@ -85,7 +86,10 @@ API key is never stored by Census Atlas; it remains in page memory until the
 page closes or reloads. The color-theme preference is saved in local browser
 storage, and geography filters can be included in a shareable URL. Census
 requests, including a supplied key, go directly from the browser to
-`api.census.gov` over HTTPS.
+`api.census.gov` over HTTPS. The page has a content security policy that limits
+scripts and asset loading to this site and Census API requests to the Census
+Bureau. The browser is instructed not to cache Census API responses or send a
+referrer with those requests.
 
 ## License
 

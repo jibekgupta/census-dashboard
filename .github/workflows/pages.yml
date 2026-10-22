@@ -24,6 +24,15 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build and verify site
+        run: npm ci && npm run check
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:

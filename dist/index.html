@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Explore U.S. Census population, income, housing, education, and employment data by state and county.">
   <meta name="theme-color" content="#f2efe6">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://api.census.gov; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'">
   <title>Census Atlas — People, places, patterns</title>
-  <link rel="preconnect" href="https://api.census.gov">
-  <link rel="stylesheet" href="./styles.css">
-  <script type="module" src="./app.js"></script>
+  <link rel="stylesheet" href="./styles.css?v=2">
+  <script type="module" src="./app.js?v=2"></script>
 </head>
 <body data-section="overview">
   <a class="skip-link" href="#main">Skip to dashboard</a>
@@ -209,7 +210,7 @@
         <article><span>04</span><h3>Privacy</h3><p>The dashboard uses no accounts or analytics. A Census API key stays only in page memory and is sent directly to api.census.gov for Census requests.</p></article>
         <article><span>05</span><h3>Comparability</h3><p>Adjacent ACS 5-year estimates share four years of survey responses. For non-overlapping comparisons, compare 2015–2019 with 2020–2024 and check Census variable-change notes.</p></article>
       </div>
-      <a class="source-link" href="https://www.census.gov/programs-surveys/acs/guidance/estimates.html" target="_blank" rel="noreferrer">Read the Census Bureau’s ACS guidance <span>↗</span></a>
+      <a class="source-link" href="https://www.census.gov/programs-surveys/acs/guidance/estimates.html" target="_blank" rel="noopener noreferrer">Read the Census Bureau’s ACS guidance <span>↗</span></a>
     </section>
 
     <section id="about-section" class="dashboard-section about-section" hidden>
@@ -217,13 +218,13 @@
       <div class="about-content">
         <p>The Quantitative Histories Workshop is a computational curriculum collective and community-centered teaching and learning lab organized around a network of collaborative projects. We use interdisciplinary perspectives and computational tools to study history, develop open educational resources and software, and explore questions of justice and futurity. As an open community, we invite knowledge exchange among participants who investigate historical events, explore data, and consider how historical understanding can inform action in the present and possibilities for the future.</p>
         <a class="source-link" href="https://quant-shop.github.io" target="_blank" rel="noopener noreferrer">Find out more about the workshop <span aria-hidden="true">↗</span></a>
-        <div class="about-privacy"><span class="kicker">Your privacy</span><p>Your Census API key is kept only in memory while this page is open. It is never stored by Census Atlas, added to the page’s shareable URL, or included in an export. Census queries go directly from your browser to the Census Bureau over HTTPS. Census Atlas has no accounts or analytics and does not collect the information you enter.</p></div>
+        <div class="about-privacy"><span class="kicker">Your privacy</span><p>Your Census API key is kept only in memory while this page is open. It is never stored by Census Atlas, added to the page’s shareable URL, or included in an export. Census queries send the key directly to the Census Bureau over HTTPS, where requests may be logged. Census Atlas has no accounts or analytics and does not collect the information you enter.</p></div>
       </div>
     </section>
   </main>
 
   <footer>
-    <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>Census <strong>Atlas</strong></span></div>
+    <div class="brand"><span class="lab-logo lab-logo-header"><img src="./quant_workshop_logo6.png" alt="" width="500" height="500"></span><span>Census <strong>Atlas</strong></span></div>
     <p>Built with public data. Not affiliated with the U.S. Census Bureau.</p>
     <p>Data refreshes when you choose a place.</p>
     <span class="lab-logo lab-logo-footer" aria-label="Quantitative Histories Workshop"><img src="./quant_workshop_logo6.png" alt="Quantitative Histories Workshop logo" width="500" height="500"></span>
@@ -242,13 +243,13 @@
   <dialog id="api-key-dialog">
     <form id="api-key-form">
       <div class="dialog-heading"><div><span class="kicker">Unlock live data</span><h2>Use your Census API key</h2></div><button class="icon-button" type="button" data-close-key aria-label="Close">×</button></div>
-      <p>Your key stays in memory while this page is open and is never stored by Census Atlas. It is sent directly to <strong>api.census.gov</strong> over HTTPS for Census requests, and is not added to the page’s shareable URL or exports.</p>
+      <p>Your key stays in memory while this page is open and is never stored by Census Atlas. Census requests send it directly to <strong>api.census.gov</strong> over HTTPS as a query parameter; the Census Bureau may log those requests. It is not added to this page’s shareable URL or exports.</p>
       <label class="input-label" for="api-key-input">Census API key</label>
       <div class="key-input-row">
         <input id="api-key-input" name="api-key" type="password" autocomplete="off" spellcheck="false" required placeholder="Paste your API key">
         <button id="show-key-button" class="outline-button" type="button" aria-pressed="false">Show</button>
       </div>
-      <p class="key-help">Don’t have one? <a href="https://api.census.gov/data/key_signup.html" target="_blank" rel="noreferrer">Request a free key from the Census Bureau ↗</a></p>
+      <p class="key-help">Don’t have one? <a href="https://api.census.gov/data/key_signup.html" target="_blank" rel="noopener noreferrer">Request a free key from the Census Bureau ↗</a></p>
       <div class="export-actions key-actions">
         <button type="submit" class="primary-button">Save for this tab &amp; load data</button>
         <button type="button" class="outline-button" id="forget-key-button" hidden>Forget key</button>

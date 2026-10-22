@@ -1,8 +1,8 @@
 import {
   STATES, VARIABLES, METRIC_META, DEMO_RECORD, DEMO_TRENDS,
   buildCensusUrl, parseCensusResponse, computeMetrics, formatMetric,
-  metricDelta, normalizeVariableCodes, toCsv,
-} from "./lib.mjs";
+  metricDelta, normalizeVariableCodes, toCsv, escapeHtml,
+} from "./lib.mjs?v=2";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -132,7 +132,7 @@ function renderSearchResults() {
   const matches = searchItems(elements.search.value);
   elements.searchResults.hidden = !matches.length;
   elements.search.setAttribute("aria-expanded", String(Boolean(matches.length)));
-  elements.searchResults.innerHTML = matches.map((item) => `<button data-search-type="${item.type}" data-search-key="${item.key}"><span>${item.label}</span><small>${item.detail}</small></button>`).join("");
+  elements.searchResults.innerHTML = matches.map((item) => `<button data-search-type="${escapeHtml(item.type)}" data-search-key="${escapeHtml(item.key)}"><span>${escapeHtml(item.label)}</span><small>${escapeHtml(item.detail)}</small></button>`).join("");
 }
 
 async function activateSearchResult(type, key) {
@@ -181,7 +181,7 @@ async function fetchJson(url, timeout = 10000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
-    const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
+    const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" }, cache: "no-store", referrerPolicy: "no-referrer" });
     if (!response.ok) throw new Error(`Census API request failed (${response.status})`);
     return await response.json();
   } finally {
@@ -197,7 +197,7 @@ async function loadCounties() {
     const counties = await getCounties(state.fips);
     elements.county.innerHTML = '<option value="">Entire state</option>' + counties
       .sort((a, b) => a.NAME.localeCompare(b.NAME))
-      .map((county) => `<option value="${county.county}">${county.NAME.split(",")[0]}</option>`).join("");
+      .map((county) => `<option value="${escapeHtml(county.county)}">${escapeHtml(county.NAME.split(",")[0])}</option>`).join("");
     elements.county.value = counties.some((item) => item.county === requestedCounty) ? requestedCounty : "";
     state.county = elements.county.value;
   } catch {
@@ -308,7 +308,7 @@ function renderProfileContext(metrics) {
     const isSame = Number.isFinite(difference) && Math.abs(difference) < .05;
     const direction = Number.isFinite(difference) ? (difference >= 0 ? "above" : "below") : "unavailable";
     const amount = Number.isFinite(difference) ? formatMetric(Math.abs(difference), METRIC_META[key].unit) : "Not available";
-    return `<article><span>${METRIC_META[key].label}</span><strong>${isSame ? "About the same" : Number.isFinite(difference) ? `${amount} ${direction}` : amount}</strong><small>Compared with ${benchmarkName}</small></article>`;
+    return `<article><span>${METRIC_META[key].label}</span><strong>${isSame ? "About the same" : Number.isFinite(difference) ? `${amount} ${direction}` : amount}</strong><small>Compared with ${escapeHtml(benchmarkName)}</small></article>`;
   }).join("");
 }
 
@@ -467,7 +467,7 @@ function renderMap() {
       const path = state.mapPath(feature);
       if (!path) return "";
       const selected = state.mapLevel === "state" ? stateFips === state.fips : stateFips === state.fips && countyFips === state.county;
-      return `<path class="geo-state ${Number.isFinite(value) ? "" : "no-data"} ${selected ? "selected" : ""}" d="${path}" style="--shade:${14 + shade * .72}%" data-map-state="${stateFips}" data-map-county="${countyFips}" tabindex="0" role="button" aria-label="${label}"></path>`;
+      return `<path class="geo-state ${Number.isFinite(value) ? "" : "no-data"} ${selected ? "selected" : ""}" d="${escapeHtml(path)}" style="--shade:${14 + shade * .72}%" data-map-state="${escapeHtml(stateFips)}" data-map-county="${escapeHtml(countyFips)}" tabindex="0" role="button" aria-label="${escapeHtml(label)}"></path>`;
     }).join("")}
   </svg><div class="map-tooltip" role="tooltip" hidden></div>`;
   $("#map-low").textContent = Number.isFinite(min) ? formatMetric(min, meta.unit) : "Lower";
@@ -481,7 +481,7 @@ function renderTileMap(rows, min, max, meta) {
     const [column, row] = STATE_TILES[stateInfo.abbreviation];
     const shade = Number.isFinite(value) ? Math.round(((value - min) / (max - min || 1)) * 100) : 0;
     const label = `${stateInfo.name}: ${formatMetric(value, meta.unit)}`;
-    return `<button class="state-tile ${Number.isFinite(value) ? "" : "no-data"} ${record.state === state.fips ? "selected" : ""}" style="grid-column:${column};grid-row:${row};--shade:${14 + shade * .72}%" data-map-state="${record.state}" aria-label="${label}">${stateInfo.abbreviation}</button>`;
+    return `<button class="state-tile ${Number.isFinite(value) ? "" : "no-data"} ${record.state === state.fips ? "selected" : ""}" style="grid-column:${column};grid-row:${row};--shade:${14 + shade * .72}%" data-map-state="${escapeHtml(record.state)}" aria-label="${escapeHtml(label)}">${stateInfo.abbreviation}</button>`;
   }).join("") + '<div class="map-tooltip" role="tooltip" hidden></div>';
   $("#map-low").textContent = Number.isFinite(min) ? formatMetric(min, meta.unit) : "Lower";
   $("#map-high").textContent = Number.isFinite(max) ? formatMetric(max, meta.unit) : "Higher";
@@ -517,8 +517,8 @@ function renderMapContext(rows, meta) {
   values.forEach((value) => bins[Math.min(binCount - 1, Math.floor((value - min) / width))].count++);
   const largest = Math.max(...bins.map((bin) => bin.count), 1);
   elements.mapDistribution.innerHTML = `<div class="histogram">${bins.map((bin) => `<div style="--height:${Math.max(5, bin.count / largest * 100)}%" title="${bin.count} areas"><i></i><span>${formatMetric(bin.start, meta.unit)}</span></div>`).join("")}</div>`;
-  elements.mapRanking.innerHTML = ranked.slice(0, 8).map((item) => `<li><button data-map-state="${item.record.state}" data-map-county="${item.record.county || ""}"><span>${item.name}</span><strong>${formatMetric(item.value, meta.unit)}</strong></button></li>`).join("");
-  elements.mapLowest.innerHTML = ranked.slice(-8).reverse().map((item) => `<li><button data-map-state="${item.record.state}" data-map-county="${item.record.county || ""}"><span>${item.name}</span><strong>${formatMetric(item.value, meta.unit)}</strong></button></li>`).join("");
+  elements.mapRanking.innerHTML = ranked.slice(0, 8).map((item) => `<li><button data-map-state="${escapeHtml(item.record.state)}" data-map-county="${escapeHtml(item.record.county || "")}"><span>${escapeHtml(item.name)}</span><strong>${formatMetric(item.value, meta.unit)}</strong></button></li>`).join("");
+  elements.mapLowest.innerHTML = ranked.slice(-8).reverse().map((item) => `<li><button data-map-state="${escapeHtml(item.record.state)}" data-map-county="${escapeHtml(item.record.county || "")}"><span>${escapeHtml(item.name)}</span><strong>${formatMetric(item.value, meta.unit)}</strong></button></li>`).join("");
 }
 
 async function ensureMapGeometry(level = "state", stateFips = state.fips, requestId = state.mapRequestId) {
@@ -527,12 +527,9 @@ async function ensureMapGeometry(level = "state", stateFips = state.fips, reques
   elements.map.className = "geo-map map-loading";
   elements.map.textContent = "Loading geographic boundaries…";
   try {
-    const [{ feature }, d3Geo] = await Promise.all([
-      import("https://cdn.jsdelivr.net/npm/topojson-client@3/+esm"),
-      import("https://cdn.jsdelivr.net/npm/d3-geo@3/+esm"),
-    ]);
+    const { feature, geoAlbersUsa, geoPath } = await import("./map-geometry.mjs");
     if (!state.mapTopology) {
-      const response = await fetch("https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json");
+      const response = await fetch("./counties-10m.json", { cache: "force-cache" });
       if (!response.ok) throw new Error(`Boundary request failed (${response.status})`);
       state.mapTopology = await response.json();
     }
@@ -540,8 +537,8 @@ async function ensureMapGeometry(level = "state", stateFips = state.fips, reques
     const allFeatures = feature(state.mapTopology, object).features;
     const features = level === "county" ? allFeatures.filter((item) => String(item.id).padStart(5, "0").startsWith(stateFips)) : allFeatures;
     const collection = { type: "FeatureCollection", features };
-    const projection = d3Geo.geoAlbersUsa().fitExtent([[20, 20], [955, 590]], collection);
-    const mapPath = d3Geo.geoPath(projection);
+    const projection = geoAlbersUsa().fitExtent([[20, 20], [955, 590]], collection);
+    const mapPath = geoPath(projection);
     if (requestId !== state.mapRequestId) return;
     state.mapGeometry = features;
     state.mapPath = mapPath;
@@ -585,7 +582,7 @@ async function loadComparisons() {
     const cached = state.compareRecords.get(`${key}-${state.year}`);
     const stateInfo = STATES.find((candidate) => candidate.fips === place.state);
     const name = cached?.NAME?.split(",")[0] || stateInfo?.name || key;
-    return `<span class="comparison-chip">${name}<button data-remove="${key}" aria-label="Remove ${name}">×</button></span>`;
+    return `<span class="comparison-chip">${escapeHtml(name)}<button data-remove="${escapeHtml(key)}" aria-label="Remove ${escapeHtml(name)}">×</button></span>`;
   }).join("");
   elements.compareTable.innerHTML = '<tbody><tr><td>Loading comparison…</td></tr></tbody>';
   await Promise.all(state.comparePlaces.map(async (place) => {
@@ -604,7 +601,7 @@ async function loadComparisons() {
   elements.compareCards.innerHTML = state.comparePlaces.map((place) => {
     const key = comparisonKey(place);
     const name = state.compareRecords.get(`${key}-${state.year}`)?.NAME?.split(",")[0] || key;
-    return `<span class="comparison-chip">${name}<button data-remove="${key}" aria-label="Remove ${name}">×</button></span>`;
+    return `<span class="comparison-chip">${escapeHtml(name)}<button data-remove="${escapeHtml(key)}" aria-label="Remove ${escapeHtml(name)}">×</button></span>`;
   }).join("");
   renderComparisonTable();
 }
@@ -617,7 +614,7 @@ function renderComparisonTable() {
   const records = state.comparePlaces.map((place) => state.compareRecords.get(`${comparisonKey(place)}-${state.year}`)).filter(Boolean);
   const keys = ["population", "income", "age", "poverty", "homeValue", "bachelors"];
   const baseline = records[0] ? computeMetrics(records[0]) : {};
-  elements.compareTable.innerHTML = `<thead><tr><th>Indicator</th>${records.map((record) => `<th>${record.NAME.split(",")[0]}</th>`).join("")}</tr></thead><tbody>${keys.map((key) => `<tr><td>${METRIC_META[key].label}</td>${records.map((record, index) => {
+  elements.compareTable.innerHTML = `<thead><tr><th>Indicator</th>${records.map((record) => `<th>${escapeHtml(record.NAME.split(",")[0])}</th>`).join("")}</tr></thead><tbody>${keys.map((key) => `<tr><td>${METRIC_META[key].label}</td>${records.map((record, index) => {
     const value = computeMetrics(record)[key].value;
     const difference = index && Number.isFinite(value) && Number.isFinite(baseline[key]?.value) ? value - baseline[key].value : null;
     const delta = Number.isFinite(difference)
@@ -639,7 +636,7 @@ async function loadCompareCounties() {
   }
   try {
     const counties = await getCounties(elements.compareSelect.value);
-    elements.compareCounty.innerHTML = '<option value="">Choose county</option>' + counties.map((county) => `<option value="${county.county}">${county.NAME.split(",")[0]}</option>`).join("");
+    elements.compareCounty.innerHTML = '<option value="">Choose county</option>' + counties.map((county) => `<option value="${escapeHtml(county.county)}">${escapeHtml(county.NAME.split(",")[0])}</option>`).join("");
     elements.compareCounty.disabled = false;
   } catch {
     elements.compareCounty.innerHTML = '<option value="">Counties unavailable</option>';
@@ -876,13 +873,17 @@ function bindEvents() {
   elements.runCustom.addEventListener("click", runCustomQuery);
   elements.exportCustom.addEventListener("click", exportCustomQuery);
   elements.apiKeyButton.addEventListener("click", () => {
-    elements.apiKeyInput.value = state.apiKey;
+    elements.apiKeyInput.value = "";
     elements.apiKeyInput.type = "password";
     elements.showKey.textContent = "Show";
     elements.showKey.setAttribute("aria-pressed", "false");
     elements.forgetKey.hidden = !state.apiKey;
     elements.apiKeyDialog.showModal();
     elements.apiKeyInput.focus();
+  });
+  elements.apiKeyDialog.addEventListener("close", () => {
+    elements.apiKeyInput.value = "";
+    elements.apiKeyInput.type = "password";
   });
   $("[data-close-key]").addEventListener("click", () => elements.apiKeyDialog.close());
   elements.showKey.addEventListener("click", () => {
